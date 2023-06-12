@@ -824,67 +824,52 @@ namespace Hook
 
 			HR(g_Device->CreateShaderResourceView(pDstTexture, &srvDesc, &pDstView));
 
-			// 使用 CopySubresourceRegion 方法将图像资源的内容复制到新的 2D 纹理的指定区域
 			UINT dstSubresource = D3D11CalcSubresource(0, 0, 1);  
 			UINT srcSubresource = D3D11CalcSubresource(0, 0, 1);  
 			UINT dstZ = 0;                                        
 
-			// 计算源纹理和目标纹理的宽高比
-			float srcAspect = (float)srcWidth / (float)srcHeight;            // 源纹理的宽高比
-			float dstAspect = (float)texDesc.Width / (float)texDesc.Height;  // 目标纹理的宽高比
+			float srcAspect = (float)srcWidth / (float)srcHeight;           
+			float dstAspect = (float)texDesc.Width / (float)texDesc.Height;  
 
-			// 根据比例调整复制的区域大小
-			UINT copyWidth, copyHeight;  // 复制区域的宽高
+			UINT copyWidth, copyHeight; 
 			if (srcAspect > dstAspect) {
-					// 源纹理比目标纹理更宽，所以要裁剪左右两边
 					copyWidth = (UINT)(dstAspect * (float)srcHeight);
 					copyHeight = srcHeight;
 			} else if (srcAspect < dstAspect) {
-					// 源纹理比目标纹理更高，所以要裁剪上下两边
 					copyWidth = srcWidth;
 					copyHeight = (UINT)((float)srcWidth / dstAspect);
 			} else {
-					// 源纹理和目标纹理的宽高比相同，不需要裁剪
 					copyWidth = srcWidth;
 					copyHeight = srcHeight;
 			}
 
-			// 使用 D3D11_BOX 结构体来指定源区域的边界框
 			D3D11_BOX srcBox = {};
-			// 计算源纹理的中心坐标
 			UINT srcCenterX = srcWidth / 2;
 			UINT srcCenterY = srcHeight / 2;
 
-			// 使用源纹理的中心坐标来偏移源区域的左右上下边界
-			srcBox.left = srcCenterX - copyWidth / 2;     // 源区域左边界
-			srcBox.right = srcCenterX + copyWidth / 2;    // 源区域右边界
-			srcBox.top = srcCenterY - copyHeight / 2;     // 源区域上边界
-			srcBox.bottom = srcCenterY + copyHeight / 2;  // 源区域下边界
+			srcBox.left = srcCenterX - copyWidth / 2;     
+			srcBox.right = srcCenterX + copyWidth / 2;    
+			srcBox.top = srcCenterY - copyHeight / 2;     
+			srcBox.bottom = srcCenterY + copyHeight / 2;  
 			srcBox.front = 0;                             // must be zero
 			srcBox.back = 1;                              // muse be one
 
-			// 计算目标纹理的中心坐标
 			UINT dstCenterX = texDesc.Width / 2;
 			UINT dstCenterY = texDesc.Height / 2;
 
 			copyWidth = min(copyWidth, texDesc.Width);
 			copyHeight = min(copyHeight, texDesc.Height);
 
-			// 计算目标区域左上角的坐标
 			UINT dstX = dstCenterX - copyWidth / 2;
 			UINT dstY = dstCenterY - copyHeight / 2;
 
-			// 调整目标区域的偏移量，使其不小于零
 			dstX = max(dstX, 0);
 			dstY = max(dstY, 0);
 
-			// 使用这个坐标作为 CopySubresourceRegion 方法的 dstX 和 dstY 参数
 			g_Context->CopySubresourceRegion(pDstTexture, dstSubresource, dstX, dstY, dstZ, mRTRenderTargetTexture.Get(), srcSubresource, &srcBox);
 
-			// 如果需要，可以使用 GenerateMips 方法为新的 2D 纹理生成 mipmap 链
 			//g_Context->GenerateMips(pDstView);
 
-			// 现在你可以使用 pDstTexture 和 pDstView 来渲染或其他操作了
 
 
 			//mBackBuffer.ReleaseAndGetAddressOf();
@@ -1496,7 +1481,7 @@ namespace Hook
 			//!!!!!WARNING!!!!!!
 			//Crash while using Weapons Workbench
 		
-			if ((20 == Stride && 24 == IndexCount && indesc.ByteWidth == 0x0000000008000000 && vedesc.ByteWidth == 0x0000000008000000 )) 
+			if ((RE::UI::GetSingleton()->GetMenuOpen("LooksMenu") && 20 == Stride && 24 == IndexCount && indesc.ByteWidth == 0x0000000008000000 && vedesc.ByteWidth == 0x0000000008000000)) 
 			{
 				pContext->VSGetShader(targetVS.GetAddressOf(), targetVSClassInstance.GetAddressOf(), &targetVSNumClassesInstance);
 				pContext->PSGetShader(targetPS.GetAddressOf(), 0, 0);
@@ -1549,15 +1534,8 @@ namespace Hook
 					targetBaseVertexLocation = BaseVertexLocation;
 
 
-					instance().Render();
-					instance().RenderToReticleTextureNew(IndexCount, StartIndexLocation, BaseVertexLocation);
-
-					needToBeCull = true;
 					
-					if (instance().mShaderResourceView)
-						instance().mShaderResourceView.ReleaseAndGetAddressOf();
-					if (instance().mRTShaderResourceView)
-						instance().mRTShaderResourceView.ReleaseAndGetAddressOf();
+					
 				}
 			}
 		}
@@ -1603,13 +1581,13 @@ namespace Hook
 			
 			func(This, a2, a3);
 
-			bSelfDraw = false;
+			instance().Render();
+			instance().RenderToReticleTextureNew(24, 0, 0);
 
 			if (instance().mShaderResourceView)
 				instance().mShaderResourceView.ReleaseAndGetAddressOf();
 			if (instance().mRTShaderResourceView)
 				instance().mRTShaderResourceView.ReleaseAndGetAddressOf();
-
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
 	};
