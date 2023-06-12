@@ -59,12 +59,18 @@ namespace Hook
 			__in_ecount_opt(NumViews) ID3D11RenderTargetView* const* ppRenderTargetViews,
 			__in_opt ID3D11DepthStencilView* pDepthStencilView);
 		using ClipCur = decltype(&ClipCursor);
-		using vfn_DeviceContext_DrawIndexed = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, INT);
+		
 		using vfn_DeviceContext_ClearDepthStencilView = void(WINAPI*)(ID3D11DeviceContext*,ID3D11DepthStencilView*,UINT,FLOAT,UINT8);
 		typedef int(__stdcall* origClearRenderTargetView)(ID3D11DeviceContext* DeviceContext, ID3D11RenderTargetView* TargetView, const FLOAT ColorRGBA[4]);
-		typedef int(__stdcall* tdefDrawIndexed)(ID3D11DeviceContext*, UINT, UINT, INT);
 		typedef HRESULT(__stdcall* D3D11ResizeBuffersHook)(IDXGISwapChain*, UINT, UINT, UINT, DXGI_FORMAT, UINT);
 		typedef void(__stdcall* D3D11PSSetShaderResourcesHook)(ID3D11DeviceContext* , UINT , UINT , ID3D11ShaderResourceView* const* );
+
+		typedef void(__stdcall* D3D11VSSetConstantBuffers)(ID3D11DeviceContext* ,UINT, UINT, ID3D11Buffer* const*);
+
+		using vfn_DeviceContext_DrawIndexed = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, INT);
+		typedef void(__stdcall* tdefDrawIndexed)(ID3D11DeviceContext*, UINT, UINT, INT);
+		//typedef void(__stdcall* vfn_DeviceContext_DrawIndexed)(ID3D11DeviceContext*, UINT, UINT, INT);
+
 
 	public:
 		static D3D& instance()
@@ -98,6 +104,14 @@ namespace Hook
 			float padding15 = 0;
 			XMFLOAT4X4 CameraRotation = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
+		};
+
+		__declspec(align(16)) struct VSOutConstantData
+		{
+			XMFLOAT4X4 testingMat = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+			XMFLOAT4X4 ftsLocalRotation = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+			XMFLOAT4X4 ftsWorldRotation = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+			XMFLOAT4X4 CameraRotation = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 		};
 
 		struct ScopeEffectShaderData
@@ -150,6 +164,8 @@ namespace Hook
 			RE::NiPoint3 weaponPos;
 			RE::NiPoint3 rootPos;
 			RE::NiMatrix3 camMat;
+			RE::NiMatrix3 ftsLocalMat;
+			RE::NiMatrix3 ftsWorldMat;
 			float deltaZoom;
 		};
 
@@ -157,6 +173,7 @@ namespace Hook
 		void Render();
 		bool InitEffect();
 		bool InitResource();
+		void InitInputLayout();
 		void OnResize();
 		void UpdateScene();
 		void ShowMenu(bool);
@@ -169,6 +186,10 @@ namespace Hook
 		void ResetZoomDelta();
 		void CreateRenderTarget();
 		void ResetUIData(ScopeData::FTSData* currData);
+		void GrabScreen();
+		void RenderToReticleTexture();
+		void RenderToReticleTextureNew(UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation);
+		static void InstallDrawIndexedHook(ID3D11Device* device, ID3D11DeviceContext* context);
 
 
 	private:
@@ -195,6 +216,7 @@ namespace Hook
 			__in_opt ID3D11DepthStencilView* pDepthStencilView);*/
 		//static void WINAPI ClearDepthStencilViewHook(ID3D11DeviceContext* pThis, _In_ ID3D11DepthStencilView* pDepthStencilView, _In_ UINT ClearFlags, _In_ FLOAT Depth, _In_ UINT8 Stencil);
 		static BOOL __stdcall ClipCursorHook(RECT*);
+		static void __stdcall vsSetConstantBuffers(ID3D11DeviceContext* pContext, UINT, UINT, ID3D11Buffer* const*);
 
 		
 		//static BOOL __stdcall ClipCursorHook(RECT*);
@@ -212,11 +234,14 @@ namespace Hook
 			ClipCur clipCursor;
 			WNDPROC wndProc;
 			OMSetRenderTargets omSetRenderTargets;
-			tdefDrawIndexed drawIndexd;
 			vfn_DeviceContext_ClearDepthStencilView clearDepthStencilView;
 			D3D11ResizeBuffersHook resizeBuffersHook;
 			D3D11PSSetShaderResourcesHook setShaderResourcesHook;
 			origClearRenderTargetView clearRenderTargetView;
+			D3D11VSSetConstantBuffers vsSetConstantBuffers;
+
+			tdefDrawIndexed drawIndexed;
+			vfn_DeviceContext_DrawIndexed drawIndexedVFN;
 		};
 		/*void** g_pDeviceVMT = nullptr;
 		void** g_pSwapchainVMT = nullptr;
@@ -259,9 +284,12 @@ namespace Hook
 		ComPtr<ID3D11Buffer> m_pScopeEffectBuffer = nullptr;
 		ComPtr<ID3D11Buffer> m_pGameConstBuffer = nullptr;
 		ComPtr<ID3D11Buffer> m_VSBuffer = nullptr;
+		ComPtr<ID3D11Buffer> m_VSOutBuffer = nullptr;
 
 		ComPtr<ID3D11VertexShader> m_pVertexShader;
 		ComPtr<ID3D11PixelShader> m_pPixelShader;
+		ComPtr<ID3D11PixelShader> m_outPutPixelShader;
+		ComPtr<ID3D11VertexShader> m_outPutVertexShader;
 		ComPtr<ID3D11Texture2D> m_pDepthStencilBuffer; 
 		ComPtr<ID3D11RenderTargetView> m_pRenderTargetView;
 		ComPtr<ID3D11DepthStencilView> m_pDepthStencilView;
@@ -282,6 +310,7 @@ namespace Hook
 
 
 		ScopeEffectShaderData scopeData;
+		VSOutConstantData VSOutData;
 		GameConstBuffer gameConstBuffer;
 		ConstBufferData constBufferData;
 		VSConstantData vsConstanData;
@@ -291,6 +320,10 @@ namespace Hook
 		ComPtr<ID3D11Texture2D> mRTRenderTargetTexture;
 		ComPtr<ID3D11RenderTargetView> mRTRenderTargetView;
 		ComPtr<ID3D11ShaderResourceView> mRTShaderResourceView;
+
+		ComPtr<ID3D11Texture2D> mOutPutRTRenderTargetTexture;
+		ComPtr<ID3D11RenderTargetView> mOutPutRTRenderTargetView;
+		ComPtr<ID3D11ShaderResourceView> mOutPutRTShaderResourceView;
 
 	};
 }

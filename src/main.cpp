@@ -3,6 +3,7 @@
 #include "RE/Havok/hkVector4.h"
 #include <hooking.h>
 #include <DirectXMath.h>
+#include <d3d11_1.h>
 
 using namespace RE;
 using namespace BSScript;
@@ -133,6 +134,8 @@ void WorldToScreen_Internal(RE::NiPoint3* in, RE::NiPoint3* out)
 
 DWORD StartHooking(LPVOID)
 {
+	
+	hookIns = &Hook::D3D::instance();
 	Hook::D3D::Register();
 	return 0;
 }
@@ -343,7 +346,10 @@ public:
 
 	void HookedPerformInputProcessing(const InputEvent* a_queueHead)
 	{
-		if (!UI::GetSingleton()->menuMode && !UI::GetSingleton()->GetMenuOpen("LooksMenu") && !UI::GetSingleton()->GetMenuOpen("ScopeMenu") && a_queueHead) {
+		if (!UI::GetSingleton()->menuMode 
+			&& !UI::GetSingleton()->GetMenuOpen("LooksMenu")
+			&& !UI::GetSingleton()->GetMenuOpen("ScopeMenu") 
+			&& a_queueHead) {
 			ProcessButtonEvent((ButtonEvent*)a_queueHead);
 			//ProcessButtonEventForMouse((MouseMoveEvent*)a_queueHead);
 		}
@@ -437,6 +443,8 @@ void HandleScopeNode()
 	}
 }
 
+bool isUpdateContext = false;
+
 void HookedUpdate()
 {
 	if (InGameFlag&& player && player->Get3D(true)) {
@@ -480,6 +488,8 @@ void HookedUpdate()
 			gcb.rootPos = rootPos;
 
 			gcb.camMat = camNode->world.rotate;
+			gcb.ftsLocalMat = scopeNode->local.rotate;
+			gcb.ftsWorldMat = scopeNode->world.rotate;
 
 			if (bHasStartedScope) {
 				scopeTimer += *ptr_deltaTime *1000;
@@ -499,13 +509,11 @@ void HookedUpdate()
 
 			hookIns->SetGameConstData(gcb);
 			HandleScopeNode();
-			hookIns->QueryRender(true);
 
 			if(IsSideAim())
 				hookIns->QueryRender(false);
-
-
-
+			else
+				hookIns->QueryRender(true);
 		}
 	}
 	
@@ -568,7 +576,7 @@ public:
 		FnProcessEvent fn = fnHash.at(*(uint64_t*)this);
 		string prefix = "";
 
-		_MESSAGE("evn.animEvent: %s; evn.argument: %s", evn.animEvent.c_str(), evn.argument.c_str());
+	//	_MESSAGE("evn.animEvent: %s; evn.argument: %s", evn.animEvent.c_str(), evn.argument.c_str());
 
 		if (IsInADS(player)) {
 
@@ -683,6 +691,8 @@ bool RegisterFuncs(BSScript::IVirtualMachine* vm)
 
 void InitializePlugin()
 {
+	hookIns->EnableRender(true);
+
 	player = PlayerCharacter::GetSingleton();
 
 	pcam = PlayerCamera::GetSingleton();
@@ -781,6 +791,17 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a
 	}
 
 	HANDLE hThread = CreateThread(NULL, 0, StartHooking, (HMODULE)F4SE::WinAPI::GetCurrentModule(), 0, NULL);
+	/*if (!isUpdateContext) {
+		auto rendererData = BSGraphics::RendererData::GetSingleton();
+		auto device0 = rendererData->device;
+		auto context0 = rendererData->context;
+
+		hookIns->InstallDrawIndexedHook(rendererData->device, rendererData->context);
+		isUpdateContext = true;
+	}
+	*/
+
+	
 	F4SE::AllocTrampoline(8 * 8);
 
 	return true;
@@ -793,6 +814,7 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Load(const F4SE::LoadInterface* a_f
 
 	F4SE::Trampoline& trampoline = F4SE::GetTrampoline();
 	PCUpdateMainThreadOrig = trampoline.write_call<5>(ptr_PCUpdateMainThread.address(), &HookedUpdate);
+	
 
 	const F4SE::PapyrusInterface* papyrus = F4SE::GetPapyrusInterface();
 	bool succ = papyrus->Register(RegisterFuncs);
@@ -804,10 +826,9 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Load(const F4SE::LoadInterface* a_f
 	message->RegisterListener([](F4SE::MessagingInterface::Message* msg) -> void {
 
 		if (msg->type == F4SE::MessagingInterface::kGameDataReady) {
-			
+
 			InitializePlugin();
-			hookIns = &Hook::D3D::instance();
-			hookIns->EnableRender(true);
+			
 
 		} else if (msg->type == F4SE::MessagingInterface::kPostLoadGame) {
 			ResetScopeStatus();

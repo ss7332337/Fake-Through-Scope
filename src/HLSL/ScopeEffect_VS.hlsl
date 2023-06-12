@@ -21,5 +21,5 @@ void main(in uint id : SV_VertexID, out float4 position : SV_Position, out float
 
 	float zMove = abs(saturate((sqrt((BaseWeaponPos)) - distanceWeap))) * MovePercentage;
 	
-	position = float4(texcoord * float2(2.0, -2.0) + float2(-1.0, 1.0), 0.0, 1.0 - zMove);
+	position = float4(texcoord * float2(2.0, -2.0) + float2(-1.0, 1.0), 0.0, 1.0);
 }

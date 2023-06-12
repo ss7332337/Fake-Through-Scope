@@ -1,3 +1,16 @@
+struct VertexPosTex
+{
+    float3 posL : POSITION;
+    float2 tex : TEXCOORD;
+};
+
+struct VertexPosHTex
+{
+    float4 posH : SV_POSITION;
+    float2 tex : TEXCOORD;
+};
+
+
 cbuffer ResolutionConstantData : register(b2){
 	float BUFFER_WIDTH;
 	float BUFFER_HEIGHT;
@@ -60,13 +73,23 @@ cbuffer ScopeEffectData : register(b0)
  	float padding14 = 0;
  	float3 CurrRootPos1;
  	float padding15 = 0;
- 	row_major float4x4 CameraRotation1; 
+ 	row_major float4x4 CameraRotation1;
+ };
+
+
+cbuffer ftsPoint: register(b3)
+ {
+	row_major float4x4 testingMat;
+	row_major float4x4 FtsLocalRotation;
+ 	row_major float4x4 FtsWorldRotation;
+	row_major float4x4 CameraRotation2;
  };
 
 SamplerState gSamLinear : register(s0);
 SamplerState gSamReticle : register(s1);
 Texture2D tBACKBUFFER : register(t4);
 Texture2D ReticleTex : register(t5);
+
 
 float GetAspectRatio() { return BUFFER_WIDTH * rcp(BUFFER_HEIGHT); }
 float2 GetPixelSize() { return float2(rcp(BUFFER_WIDTH), rcp(BUFFER_HEIGHT)); }

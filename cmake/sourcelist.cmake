@@ -25,6 +25,8 @@ set(SOURCES
 	src/HLSL/Triangle.hlsli
 	src/HLSL/ScopeEffect_PS.hlsl
 	src/HLSL/ScopeEffect_VS.hlsl
+	src/HLSL/ScopeEffect_PS_Output.hlsl
+	src/HLSL/ScopeEffect_VS_Output.hlsl
 
 )
 	
