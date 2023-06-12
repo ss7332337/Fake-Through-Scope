@@ -566,8 +566,8 @@ namespace Hook
 		HR(CreateShaderFromFile(L"Data\\Shaders\\XiFeiLi\\ScopeEffect_VS_Output.cso", L"HLSL\\ScopeEffect_VS_Output.hlsl", "main", "vs_5_0", blob.ReleaseAndGetAddressOf()));
 		HR(g_Device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, m_outPutVertexShader.GetAddressOf()));
 
-		HR(g_Device->CreateInputLayout(inputElements, ARRAYSIZE(inputElements),
-			blob->GetBufferPointer(), blob->GetBufferSize(), m_pVertexLayout.GetAddressOf()));
+		//HR(g_Device->CreateInputLayout(inputElements, ARRAYSIZE(inputElements),
+		//	blob->GetBufferPointer(), blob->GetBufferSize(), m_pVertexLayout.GetAddressOf()));
 
 		return true;
 	}
@@ -661,12 +661,6 @@ namespace Hook
 		m_pDepthStencilView.Reset();
 		m_pDepthStencilBuffer.Reset();
 
-		//g_Swapchain->ResizeBuffers(1, RE::BSGraphics::RendererData::GetSingleton()->renderWindow->windowWidth, RE::BSGraphics::RendererData::GetSingleton()->renderWindow->windowWidth, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
-		/*g_Swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(mBackBuffer.GetAddressOf()));
-		HR(g_Device->CreateRenderTargetView(mBackBuffer.Get(), nullptr, m_pRenderTargetView.GetAddressOf()));
-
-		mBackBuffer.Reset();*/
-
 		D3D11_TEXTURE2D_DESC depthStencilDesc;
 
 		depthStencilDesc.Width = windowWidth;
@@ -695,7 +689,7 @@ namespace Hook
 		textureDesc.Height = windowHeight;
 		textureDesc.MipLevels = 1;
 		textureDesc.ArraySize = 1;
-		textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;  //纹理像素为12个字节
+		textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT; 
 		textureDesc.SampleDesc.Count = 1;
 		textureDesc.Usage = D3D11_USAGE_DEFAULT;
 		textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
@@ -704,7 +698,6 @@ namespace Hook
 
 		HR(g_Device->CreateTexture2D(&textureDesc, NULL, mRTRenderTargetTexture.GetAddressOf()));
 
-		//第二，填充渲染目标视图形容体,并进行创建目标渲染视图
 		D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc;
 
 		renderTargetViewDesc.Format = textureDesc.Format;
@@ -712,7 +705,6 @@ namespace Hook
 		renderTargetViewDesc.Texture2D.MipSlice = 0;
 		HR(g_Device->CreateRenderTargetView(mRTRenderTargetTexture.Get(), &renderTargetViewDesc, mRTRenderTargetView.GetAddressOf()));
 
-		//第三,填充着色器资源视图形容体,并进行创建着色器资源视图
 		D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
 		shaderResourceViewDesc.Format = textureDesc.Format;
 		shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
@@ -727,7 +719,7 @@ namespace Hook
 		textureDesc.Height = 1024;
 		textureDesc.MipLevels = 1;
 		textureDesc.ArraySize = 1;
-		textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;  //纹理像素为12个字节
+		textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 		textureDesc.SampleDesc.Count = 1;
 		textureDesc.Usage = D3D11_USAGE_DEFAULT;
 		textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
@@ -964,12 +956,6 @@ namespace Hook
 
 		g_Context->OMSetRenderTargets(1, mRTRenderTargetView.GetAddressOf(), tempSV);
 
-
-		/*FLOAT clearColor[4] = { 0, 0, 0, 0 };
-		g_Context->ClearRenderTargetView(mRTRenderTargetView.Get(), clearColor);*/
-		/*if (isActive_TAA)
-			g_Context->OMSetRenderTargets(1, m_pRenderTargetView.GetAddressOf(), nullptr);*/
-
 		HR(g_Swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(mBackBuffer.GetAddressOf())));
 		mBackBuffer->GetDesc(&bbDesc);
 		bbDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
@@ -978,7 +964,6 @@ namespace Hook
 		bbDesc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
 
 		HR(g_Device->CreateTexture2D(&bbDesc, nullptr, &mDynamicTexture));
-		////g_Context->CopyResource(mRTRenderTargetTexture.Get(), mBackBuffer.Get());
 		g_Context->CopyResource(mDynamicTexture.Get(), currRTtexture);
 		HR(g_Device->CreateShaderResourceView(currRTtexture, NULL, mShaderResourceView.GetAddressOf()));
 		
@@ -991,9 +976,7 @@ namespace Hook
 		g_Context->VSSetConstantBuffers(1, 1, m_VSBuffer.GetAddressOf());
 		g_Context->PSSetConstantBuffers(2, 1, m_pConstantBufferData.GetAddressOf());
 
-		g_Context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
-		g_Context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
-		g_Context->IASetInputLayout(m_pVertexLayout.Get());
+		
 
 #pragma region FO4GameConstantBuffer
 
@@ -1102,24 +1085,24 @@ namespace Hook
 				free((void*)tempWchar);
 			bChangeAimTexture = false;
 		}
+
+		
 		g_Context->PSSetShaderResources(5, 1, instance().mTextDDS_SRV.GetAddressOf());
+		g_Context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
+		g_Context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
+
+		
+
+		g_Context->Draw(3, 0);
+
+
+		g_Context->OMSetRenderTargets(1, &tempRt, tempSV);
 
 		mShaderResourceView.ReleaseAndGetAddressOf();
 		mDynamicTexture.ReleaseAndGetAddressOf();
 		mBackBuffer.ReleaseAndGetAddressOf();
 		currRTtexture->Release();
 
-		g_Context->Draw(3, 0);
-
-		//instance().RenderToReticleTextureNew(targetIndexCount, targetStartIndexLocation, targetBaseVertexLocation);
-
-		g_Context->OMSetRenderTargets(1, &tempRt, tempSV);
-
-		/*HR(g_Device->CreateTexture2D(&bbDesc, nullptr, &mDynamicTexture));
-		g_Context->CopyResource(mDynamicTexture.Get(), mRTRenderTargetTexture.Get());
-		HR(g_Device->CreateShaderResourceView(mDynamicTexture.Get(), NULL, mShaderResourceView.GetAddressOf()));
-
-		g_Context->PSSetShaderResources(0, 1, instance().mShaderResourceView.GetAddressOf());*/
 		
 
 	}
@@ -1166,28 +1149,19 @@ namespace Hook
 		assert(g_Context);
 		assert(g_Swapchain);
 
-		if (bQueryRender) 
-		{
-			if (isEnableRender && pcam && player) 
-			{
+		if (bQueryRender) {
+			if (isEnableRender && pcam && player) {
 				if (bIsFirst) {
-					OnResize();
-					InitEffect();
-					InitResource();
-					bIsFirst = false;
+						OnResize();
+						InitEffect();
+						InitResource();
+						bIsFirst = false;
 				}
 
 				UpdateScene();
 				bHasDraw = true;
-				//g_Context->Draw(3, 0);
-				/*if (instance().mShaderResourceView)
-					instance().mShaderResourceView.ReleaseAndGetAddressOf();*/
 			}
-			//bQueryRender = false;
-			/*if (!isActive_TAA)
-				g_Context->OMSetRenderTargets(1, m_pRenderTargetView.GetAddressOf(), nullptr);*/
 		}
-		
 	}
 
 	void D3D::ResetUIData(FTSData* currData)
@@ -1497,7 +1471,7 @@ namespace Hook
 	void __stdcall D3D::DrawIndexedHook(ID3D11DeviceContext* pContext, UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation)
 	{
 		bool needToBeCull = false;
-		//_MESSAGE("DRAWINDEXED!");
+
 		if (!bSelfDraw && isEnableRender) 
 		{
 		
@@ -1509,7 +1483,7 @@ namespace Hook
 				veBuffer = NULL;
 			}
 
-			//get indesc.ByteWidth (comment out if not used)
+
 			pContext->IAGetIndexBuffer(&inBuffer, &inFormat, &inOffset);
 			if (inBuffer != NULL)
 				inBuffer->GetDesc(&indesc);
