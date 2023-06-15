@@ -456,6 +456,10 @@ void HookedUpdate()
 		
 		//MenuCursor::GetSingleton()->CenterCursor();
 		
+		//_MESSAGE("Menu: %s", UI::GetSingleton()->menuStack[0]->menuName.c_str());
+
+		
+
 		NiPointer<bhkCharacterController> con = player->currentProcess->middleHigh->charController;
 		uintptr_t charProxy = *(uintptr_t*)((uintptr_t)con.get() + 0x470);
 		hkTransform* charProxyTransform = (hkTransform*)(charProxy + 0x40);
@@ -510,10 +514,19 @@ void HookedUpdate()
 			hookIns->SetGameConstData(gcb);
 			HandleScopeNode();
 
-			if(IsSideAim())
+			if (IsSideAim() || RE::UI::GetSingleton()->GetMenuOpen("VignetteMenu")) {
+				hookIns->EnableRender(false);
 				hookIns->QueryRender(false);
-			else
-				hookIns->QueryRender(true);
+			} 
+			else {
+				if (IsInADS(player)) 
+				{
+					hookIns->EnableRender(true);
+					hookIns->QueryRender(true);
+				}
+				
+			}
+
 		}
 	}
 	
@@ -640,6 +653,9 @@ public:
 			
 		} 
 		else{
+			hookIns->EnableRender(false);
+			hookIns->QueryRender(false);
+
 			hasUpdateSighted = false;
 			hasEjectShellCasing = false;
 			hookIns->StartScope(false);

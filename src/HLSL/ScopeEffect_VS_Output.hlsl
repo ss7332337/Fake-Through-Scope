@@ -1,6 +1,3 @@
-#include "Triangle.hlsli"
-
-
 
 // void PostProcessVS(in uint id: SV_VertexID, out float4 position: SV_Position, out float2 texcoord: TEXCOORD)
 // {

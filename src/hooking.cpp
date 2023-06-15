@@ -324,6 +324,33 @@ XMFLOAT4X4 localTestingMat = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
 //	{ XMFLOAT3(0.5f, 0.5f, 1.0f)  , XMFLOAT2(1.0f, 0.0f) }     // 右上
 //};
 
+struct Vertex
+{
+	float x, y, z;  // 位置
+	float r, g, b;  // 颜色
+};
+
+// 顶点数据
+Vertex gdc_Vertices[] = {
+	{ -1.0f, -1.0f, 0.0f, 0.0f, 0.0f},  // 左下角
+	{ -1.0f, 3.0f, 0.0f, 0.0f, 2.0f},   // 左上角
+	{ 3.0f, -1.0f, 0.0f, 2.0f, 0.0f}    // 右下角
+};
+
+unsigned int gdc_Indices[] = {
+	0, 1, 2  // 第一个三角形
+};
+
+ID3D11Buffer* gdc_pVertexBuffer = NULL;
+ID3D11InputLayout* gdc_pVertexLayout = NULL;
+ID3D11Buffer* gdc_pIndexBuffer = NULL;
+D3D11_INPUT_ELEMENT_DESC gdc_layout[] = {
+	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },  // 位置元素描述
+	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },    // 颜色元素描述
+};
+
+
+
 D3D11_INPUT_ELEMENT_DESC inputElements[] = {
 	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(RTVertex, position), D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(RTVertex, texcoord), D3D11_INPUT_PER_VERTEX_DATA, 0 }
@@ -562,12 +589,13 @@ namespace Hook
 
 		HR(CreateShaderFromFile(L"Data\\Shaders\\XiFeiLi\\ScopeEffect_VS.cso", L"HLSL\\ScopeEffect_VS.hlsl", "main", "vs_5_0", blob.ReleaseAndGetAddressOf()));
 		HR(g_Device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, m_pVertexShader.GetAddressOf()));
+
+		HR(g_Device->CreateInputLayout(gdc_layout, ARRAYSIZE(gdc_layout), blob->GetBufferPointer(), blob->GetBufferSize(), &gdc_pVertexLayout));
 		
 		HR(CreateShaderFromFile(L"Data\\Shaders\\XiFeiLi\\ScopeEffect_VS_Output.cso", L"HLSL\\ScopeEffect_VS_Output.hlsl", "main", "vs_5_0", blob.ReleaseAndGetAddressOf()));
 		HR(g_Device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, m_outPutVertexShader.GetAddressOf()));
 
-		//HR(g_Device->CreateInputLayout(inputElements, ARRAYSIZE(inputElements),
-		//	blob->GetBufferPointer(), blob->GetBufferSize(), m_pVertexLayout.GetAddressOf()));
+		
 
 		return true;
 	}
@@ -641,10 +669,28 @@ namespace Hook
 		sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
 		HR(g_Device->CreateSamplerState(&sampDesc, m_pSamplerState.GetAddressOf()));
 
+		D3D11_BUFFER_DESC bd;
+		ZeroMemory(&bd, sizeof(bd));
+		bd.Usage = D3D11_USAGE_DEFAULT;
+		bd.ByteWidth = sizeof(Vertex) * ARRAYSIZE(gdc_Vertices);
+		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		bd.CPUAccessFlags = 0;
+		D3D11_SUBRESOURCE_DATA InitData;
+		ZeroMemory(&InitData, sizeof(InitData));
+		InitData.pSysMem = gdc_Vertices;
+		HR(g_Device->CreateBuffer(&bd, &InitData, &gdc_pVertexBuffer));
+
+		// 创建索引缓冲区
+		
+		bd.Usage = D3D11_USAGE_DEFAULT;
+		bd.ByteWidth = sizeof(unsigned int) * ARRAYSIZE(gdc_Indices);
+		bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		bd.CPUAccessFlags = 0;
+		InitData.pSysMem = gdc_Indices;
+		HR(g_Device->CreateBuffer(&bd, &InitData, &gdc_pIndexBuffer));
+
 
 		CreateBlender();
-
-		
 
 		return true;
 	}
@@ -652,14 +698,15 @@ namespace Hook
 	void D3D::InitInputLayout()
 	{
 
+		
 	}
 
 	void D3D::OnResize()
 	{
 
-		m_pRenderTargetView.Reset();
+		/*m_pRenderTargetView.Reset();
 		m_pDepthStencilView.Reset();
-		m_pDepthStencilBuffer.Reset();
+		m_pDepthStencilBuffer.Reset();*/
 
 		D3D11_TEXTURE2D_DESC depthStencilDesc;
 
@@ -676,6 +723,7 @@ namespace Hook
 		depthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 		depthStencilDesc.CPUAccessFlags = 0;
 		depthStencilDesc.MiscFlags = 0;
+
 
 		HR(g_Device->CreateTexture2D(&depthStencilDesc, nullptr, m_pDepthStencilBuffer.GetAddressOf()));
 		HR(g_Device->CreateDepthStencilView(m_pDepthStencilBuffer.Get(), nullptr, m_pDepthStencilView.GetAddressOf()));
@@ -696,6 +744,7 @@ namespace Hook
 		textureDesc.CPUAccessFlags = 0;
 		textureDesc.MiscFlags = 0;
 
+		HR(g_Device->CreateTexture2D(&textureDesc, NULL, &mBackBufferCopy));
 		HR(g_Device->CreateTexture2D(&textureDesc, NULL, mRTRenderTargetTexture.GetAddressOf()));
 
 		D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc;
@@ -727,6 +776,7 @@ namespace Hook
 		textureDesc.MiscFlags = 0;
 
 		HR(g_Device->CreateTexture2D(&textureDesc, NULL, mOutPutRTRenderTargetTexture.GetAddressOf()));
+		
 		HR(g_Device->CreateRenderTargetView(mOutPutRTRenderTargetTexture.Get(), &renderTargetViewDesc, mOutPutRTRenderTargetView.GetAddressOf()));
 		HR(g_Device->CreateShaderResourceView(mOutPutRTRenderTargetTexture.Get(), &shaderResourceViewDesc, mOutPutRTShaderResourceView.GetAddressOf()));
 
@@ -761,9 +811,9 @@ namespace Hook
 	UINT targetVertexBufferStrides;
 	UINT targetVertexBufferOffsets;
 
-	ComPtr <ID3D11Buffer> targetVertexConstBuffer;
-	ComPtr <ID3D11Buffer> targetVertexConstBuffer1p5;
-	ComPtr <ID3D11Buffer> targetVertexConstBuffer1;
+	ComPtr<ID3D11Buffer> targetVertexConstBuffer;
+	ComPtr<ID3D11Buffer> targetVertexConstBuffer1p5;
+	ComPtr<ID3D11Buffer> targetVertexConstBuffer1;
 
 	ComPtr<ID3D11Buffer> targetVertexConstBufferOutPut;
 	ComPtr<ID3D11Buffer> targetVertexConstBufferOutPut1p5;
@@ -774,6 +824,7 @@ namespace Hook
 	
 
 	bool bHasDraw = false;
+	bool bHasGetBackBuffer = false;
 	ComPtr<ID3D11ShaderResourceView> targetSRV;
 
 
@@ -782,10 +833,8 @@ namespace Hook
 		if (!bIsFirst && isEnableRender && targetVS.Get())
 		{
 			
-			HR(g_Swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(mBackBuffer.GetAddressOf())));
-			//HR(g_Device->CreateRenderTargetView(mBackBuffer.Get(), nullptr, m_pRenderTargetView.GetAddressOf()));
 
-			//g_Context->OMSetRenderTargets(1, m_pRenderTargetView.GetAddressOf(), nullptr);
+			g_Context->OMSetRenderTargets(1, m_pRenderTargetView.GetAddressOf(), nullptr);
 
 			D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
 			ZeroMemory(&rtvDesc, sizeof(rtvDesc));
@@ -795,8 +844,8 @@ namespace Hook
 
 			UINT srcWidth = windowWidth;
 			UINT srcHeight = windowHeight;
-			float outPutWidth = 2048;
-			float outPutHeight = 2048;
+			float outPutWidth = 4096;
+			float outPutHeight = 4096;
 			DXGI_FORMAT srcFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
 
 			ID3D11Texture2D* pDstTexture = nullptr;
@@ -871,9 +920,6 @@ namespace Hook
 			//g_Context->GenerateMips(pDstView);
 
 
-
-			//mBackBuffer.ReleaseAndGetAddressOf();
-
 			g_Context->VSSetShader(targetVS.Get(), targetVSClassInstance.GetAddressOf(), targetVSNumClassesInstance);
 			g_Context->PSSetShader(m_outPutPixelShader.Get(), nullptr, 0);
 
@@ -899,9 +945,9 @@ namespace Hook
 			g_Context->OMSetDepthStencilState(targetDepthStencilState.Get(), 0);
 
 			g_Context->IASetInputLayout(targetInputLayout.Get());
-			g_Context->VSSetConstantBuffers(1, 1, targetVertexConstBufferOutPut.GetAddressOf());
-			g_Context->VSSetConstantBuffers(2, 1, targetVertexConstBufferOutPut1p5.GetAddressOf());
-			g_Context->VSSetConstantBuffers(12, 1, targetVertexConstBufferOutPut1.GetAddressOf());
+			g_Context->VSSetConstantBuffers(1, 1, targetVertexConstBuffer.GetAddressOf());
+			g_Context->VSSetConstantBuffers(2, 1, targetVertexConstBuffer1p5.GetAddressOf());
+			g_Context->VSSetConstantBuffers(12, 1, targetVertexConstBuffer1.GetAddressOf());
 			g_Context->IASetIndexBuffer(targetIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, targetIndexBufferOffset);
 			g_Context->IASetVertexBuffers(0, 1, targetVertexBuffer.GetAddressOf(), &targetVertexBufferStrides, &targetVertexBufferOffsets);
 
@@ -909,17 +955,21 @@ namespace Hook
 			g_Context->PSSetShaderResources(0, 1, &pDstView);
 			g_Context->PSSetShaderResources(5, 1, &pDstView);
 
-			/*bSelfDraw = true;
+			bSelfDraw = true;
 			g_Context->DrawIndexed(IndexCount, StartIndexLocation, BaseVertexLocation);
-			bSelfDraw = false;*/
+			bSelfDraw = false;
 
 			if (pDstTexture)
 				pDstTexture->Release();
 			if (pDstView)
 				pDstView->Release();
+
+
+			/*targetVertexConstBufferOutPut->Release();
+			targetVertexConstBufferOutPut1p5->Release();
+			targetVertexConstBufferOutPut1->Release();*/
 			
-			//g_Context->OMSetRenderTargets(1, &tempRt, tempSV);
-			//m_pRenderTargetView.ReleaseAndGetAddressOf();
+			g_Context->OMSetRenderTargets(1, &tempRt, tempSV);
 		}
 			
 	}
@@ -927,41 +977,28 @@ namespace Hook
 	void D3D::UpdateScene()
 	{
 		auto currData = sdh->GetCurrentFTSData();
-		 
+
 		if (!currData)
 			return;
 
-		g_Context->Flush();
 		g_Context->OMGetRenderTargets(1, &tempRt, &tempSV);
 
-		ID3D11Resource* currRTResource;
-		tempRt->GetResource(&currRTResource);
-		//ID3D11Texture2D* currRTtexture = mBackBuffer.Get();
-		ID3D11Texture2D* currRTtexture = (ID3D11Texture2D*)currRTResource;
 
 		g_Context->OMSetRenderTargets(1, mRTRenderTargetView.GetAddressOf(), tempSV);
 
-		HR(g_Swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(mBackBuffer.GetAddressOf())));
+
+		g_Context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
+		g_Context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
+
+		
 		mBackBuffer->GetDesc(&bbDesc);
 		bbDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 		bbDesc.CPUAccessFlags = 0;
 		bbDesc.Usage = D3D11_USAGE_DEFAULT;
 		bbDesc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
 
-		HR(g_Device->CreateTexture2D(&bbDesc, nullptr, &mDynamicTexture));
-		g_Context->CopyResource(mDynamicTexture.Get(), currRTtexture);
-		HR(g_Device->CreateShaderResourceView(currRTtexture, NULL, mShaderResourceView.GetAddressOf()));
-		
-		g_Context->OMSetBlendState(BSTransparent.Get(), nullptr, 0xFFFFFFFF);
-
-		
-		g_Context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
-		g_Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		g_Context->PSSetConstantBuffers(0, 1, m_pScopeEffectBuffer.GetAddressOf());
-		g_Context->VSSetConstantBuffers(1, 1, m_VSBuffer.GetAddressOf());
-		g_Context->PSSetConstantBuffers(2, 1, m_pConstantBufferData.GetAddressOf());
-
-		
+		//HR(g_Device->CreateTexture2D(&bbDesc, nullptr, &mDynamicTexture));
+		g_Context->CopyResource(mBackBufferCopy, mBackBuffer);
 
 #pragma region FO4GameConstantBuffer
 
@@ -1054,7 +1091,7 @@ namespace Hook
 		memcpy_s(mappedData.pData, sizeof(VSConstantData), &instance().constBufferData, sizeof(VSConstantData));
 		g_Context->Unmap(instance().m_pConstantBufferData.Get(), 0);
 
-		g_Context->PSSetShaderResources(4, 1, instance().mShaderResourceView.GetAddressOf());
+		
 
 		if (bChangeAimTexture) {
 			if (instance().mTextDDS_SRV)
@@ -1072,26 +1109,43 @@ namespace Hook
 		}
 
 		
+
+		UINT stride = sizeof(Vertex);
+		UINT offset = 0;
+		
+
+		// 指定图元类型为三角形列表
+		g_Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		
+		g_Context->OMSetBlendState(BSTransparent.Get(), nullptr, 0xFFFFFFFF);
+		g_Context->IASetInputLayout(gdc_pVertexLayout);
+		g_Context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
+		g_Context->VSSetConstantBuffers(1, 1, m_VSBuffer.GetAddressOf());
+
+		g_Context->PSSetConstantBuffers(0, 1, m_pScopeEffectBuffer.GetAddressOf());
+		g_Context->PSSetConstantBuffers(2, 1, m_pConstantBufferData.GetAddressOf());
+
+		
+		g_Context->PSSetShaderResources(4, 1, instance().mShaderResourceView.GetAddressOf());
 		g_Context->PSSetShaderResources(5, 1, instance().mTextDDS_SRV.GetAddressOf());
-		g_Context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
-		g_Context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
 
 		
 
-		g_Context->Draw(3, 0);
+		
+		g_Context->IASetIndexBuffer(gdc_pIndexBuffer, DXGI_FORMAT_R32_UINT, offset);
+		g_Context->IASetVertexBuffers(0, 1, &gdc_pVertexBuffer, &stride, &offset);
+
+		g_Context->DrawIndexed(3, 0, 0);
 
 
 		g_Context->OMSetRenderTargets(1, &tempRt, tempSV);
-
-		mShaderResourceView.ReleaseAndGetAddressOf();
-		mDynamicTexture.ReleaseAndGetAddressOf();
-		mBackBuffer.ReleaseAndGetAddressOf();
-		currRTtexture->Release();
-
 		
 
 	}
 
+	/// <summary>
+	/// 未使用
+	/// </summary>
 	void D3D::CreateRenderTarget()
 	{
 		D3D11_TEXTURE2D_DESC textureDesc;
@@ -1135,13 +1189,34 @@ namespace Hook
 		assert(g_Swapchain);
 
 		if (bQueryRender) {
-			if (isEnableRender && pcam && player) {
-				if (bIsFirst) {
-						OnResize();
-						InitEffect();
-						InitResource();
-						bIsFirst = false;
+
+			if (!bHasGetBackBuffer) 
+			{
+				IDXGISwapChain* mSwapChain;
+				HR(g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain)));
+				HR(g_Swapchain->GetBuffer(0, IID_PPV_ARGS(&mRealBackBuffer)));
+				HR(g_Swapchain->GetBuffer(0, IID_PPV_ARGS(&mBackBuffer)));
+
+				HR(g_Device->CreateRenderTargetView(mRealBackBuffer, nullptr, m_pRenderTargetView.GetAddressOf()));
+				HR(g_Device->CreateShaderResourceView(mBackBuffer, NULL, mShaderResourceView.GetAddressOf()));
+
+				bHasGetBackBuffer = true;
+			}
+
+
+			if (isEnableRender && pcam && player)
+			{
+				if (bIsFirst) 
+				{
+
+					OnResize();
+					InitEffect();
+					InitResource();
+
+					
+					bIsFirst = false;
 				}
+				
 
 				UpdateScene();
 				bHasDraw = true;
@@ -1452,6 +1527,8 @@ namespace Hook
 
 	}
 	
+
+
 	
 	void __stdcall D3D::DrawIndexedHook(ID3D11DeviceContext* pContext, UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation)
 	{
@@ -1481,7 +1558,7 @@ namespace Hook
 			//!!!!!WARNING!!!!!!
 			//Crash while using Weapons Workbench
 		
-			if ((RE::UI::GetSingleton()->GetMenuOpen("LooksMenu") && 20 == Stride && 24 == IndexCount && indesc.ByteWidth == 0x0000000008000000 && vedesc.ByteWidth == 0x0000000008000000)) 
+			if (20 == Stride && 24 == IndexCount && indesc.ByteWidth == 0x0000000008000000 && vedesc.ByteWidth == 0x0000000008000000) 
 			{
 				pContext->VSGetShader(targetVS.GetAddressOf(), targetVSClassInstance.GetAddressOf(), &targetVSNumClassesInstance);
 				pContext->PSGetShader(targetPS.GetAddressOf(), 0, 0);
@@ -1490,58 +1567,63 @@ namespace Hook
 				pContext->PSGetConstantBuffers(1, 2, &pscBuffer);
 				pContext->IAGetIndexBuffer(targetIndexBuffer.GetAddressOf(), &targetIndexBufferFormat, &targetIndexBufferOffset);
 				pContext->IAGetVertexBuffers(0, 1, targetVertexBuffer.GetAddressOf(), &targetVertexBufferStrides, &targetVertexBufferOffsets);
+
 				pContext->VSGetConstantBuffers(1, 1, targetVertexConstBuffer.GetAddressOf());
 				pContext->VSGetConstantBuffers(2, 1, targetVertexConstBuffer1p5.GetAddressOf());
 				pContext->VSGetConstantBuffers(12, 1, targetVertexConstBuffer1.GetAddressOf());
+
+				D3D11_BUFFER_DESC buffer1Desc;
+				targetVertexConstBuffer1->GetDesc(&buffer1Desc);
+				
+
 				pContext->PSGetShaderResources(0, 1, DrawIndexedSRV.GetAddressOf());
 				
-				ID3D11Resource* tempSource = nullptr;
-				DrawIndexedSRV->GetResource(&tempSource);
-				D3D11_RESOURCE_DIMENSION drd;
-				tempSource->GetType(&drd);
-				UINT width = 0;
-				UINT height = 0;
 
-				if (drd == D3D11_RESOURCE_DIMENSION_TEXTURE2D) {
-					ID3D11Texture2D* tex2d = nullptr;
-					tempSource->QueryInterface(&tex2d);
-					D3D11_TEXTURE2D_DESC desc;
-					tex2d->GetDesc(&desc);
-					width = desc.Width;
-					height = desc.Height;
-					tex2d->Release();
-				} 
 
-				tempSource->Release();
+				ID3D11Resource* pResource;
+				DrawIndexedSRV->GetResource(&pResource);
+				D3D11_SHADER_RESOURCE_VIEW_DESC tempSRVDesc;
+				DrawIndexedSRV->GetDesc(&tempSRVDesc);
 
-				if (drd == D3D11_RESOURCE_DIMENSION_TEXTURE2D && width == 2048 && height == 2048)
-				{
-					if (targetVertexConstBuffer.Get() && targetVertexConstBuffer1.Get()) {
-						targetVertexConstBuffer.CopyTo(&targetVertexConstBufferOutPut);
-						targetVertexConstBuffer1p5.CopyTo(&targetVertexConstBufferOutPut1p5);
-						targetVertexConstBuffer1.CopyTo(&targetVertexConstBufferOutPut1);
+				// 获取资源的类型
+				D3D11_RESOURCE_DIMENSION dimension;
+				pResource->GetType(&dimension);
 
-						D3D11_BUFFER_DESC tempDescA;
-						D3D11_BUFFER_DESC tempDescB;
-						if (targetVertexConstBufferOutPut.Get() && targetVertexConstBufferOutPut1.Get()) {
-							targetVertexConstBufferOutPut->GetDesc(&tempDescA);
-							targetVertexConstBuffer1->GetDesc(&tempDescB);
+				// 检查是否是 2D 纹理
+				if (dimension == D3D11_RESOURCE_DIMENSION_TEXTURE2D) {
+					// 使用 QueryInterface 获取 ID3D11Texture2D 接口的指针
+					ID3D11Texture2D* pTexture2D = nullptr;
+					HRESULT hr = pResource->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&pTexture2D);
+					if (SUCCEEDED(hr)) {
+						// 获取纹理描述
+						D3D11_TEXTURE2D_DESC desc;
+						pTexture2D->GetDesc(&desc);
+
+						if (desc.Width == 2048 && tempSRVDesc.Format == DXGI_FORMAT_BC2_UNORM_SRGB && tempSRVDesc.Texture2D.MipLevels == 1 && tempSRVDesc.ViewDimension == D3D11_SRV_DIMENSION_TEXTURE2D) {
+							if (targetVertexConstBuffer && targetVertexConstBuffer1p5 && targetVertexConstBuffer1) {
+								targetVertexConstBuffer.CopyTo(targetVertexConstBufferOutPut.GetAddressOf());
+								targetVertexConstBuffer1p5.CopyTo(targetVertexConstBufferOutPut1p5.GetAddressOf());
+								targetVertexConstBuffer1.CopyTo(targetVertexConstBufferOutPut1.GetAddressOf());
+							}
+
+							targetIndexCount = IndexCount;
+							targetStartIndexLocation = StartIndexLocation;
+							targetBaseVertexLocation = BaseVertexLocation;
+
+							return g_Context->DrawIndexedInstanced(24, 0, 0, 0, 0);
 						}
+
+						pTexture2D->Release();
 					}
-
-					targetIndexCount = IndexCount;
-					targetStartIndexLocation = StartIndexLocation;
-					targetBaseVertexLocation = BaseVertexLocation;
-
-
-					
-					
 				}
+
+
+				
 			}
 		}
 		
 
-		oldFuncs.drawIndexed(pContext, IndexCount, StartIndexLocation, BaseVertexLocation);
+		return oldFuncs.drawIndexed(pContext, IndexCount, StartIndexLocation, BaseVertexLocation);
 
 	}
 
@@ -1552,8 +1634,7 @@ namespace Hook
 
 	HRESULT __stdcall D3D::PresentHook(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
 	{
-		//
-		void** swapChainVTable = get_vtable_ptr(g_Context.Get());
+		//void** swapChainVTable = get_vtable_ptr(g_Context.Get());
 
 		bSelfDraw = false;
 		if (!isActive_TAA)
@@ -1578,16 +1659,17 @@ namespace Hook
 		static void thunk(uint64_t This, uint64_t a2, uint64_t a3)
 		{
 
-			
 			func(This, a2, a3);
-
 			instance().Render();
-			instance().RenderToReticleTextureNew(24, 0, 0);
+			instance().RenderToReticleTextureNew(targetIndexCount, targetStartIndexLocation, targetBaseVertexLocation);
 
-			if (instance().mShaderResourceView)
-				instance().mShaderResourceView.ReleaseAndGetAddressOf();
-			if (instance().mRTShaderResourceView)
-				instance().mRTShaderResourceView.ReleaseAndGetAddressOf();
+			//if (instance().mShaderResourceView)
+			//	instance().mShaderResourceView.ReleaseAndGetAddressOf();
+			/*if (instance().mRTShaderResourceView)
+				instance().mRTShaderResourceView.ReleaseAndGetAddressOf();*/
+			
+
+			
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
 	};
@@ -1699,16 +1781,22 @@ namespace Hook
 		//This one working
 		//HookFunc(vtbl, 7, (std::uintptr_t)vsSetConstantBuffers, (std::uintptr_t*)&oldFuncs.vsSetConstantBuffers);
 
+		/*IDXGISwapChain* mSwapChain;
+		HR(g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain)));
 		DXGI_SWAP_CHAIN_DESC sd;
-		g_Swapchain->GetDesc(&sd);
+		mSwapChain->GetDesc(&sd);*/
 
+		
+		
+		
 		RECT rect;
 		auto window = GetActiveWindow();
+		DXGI_SWAP_CHAIN_DESC sd;
+		g_Swapchain->GetDesc(&sd);
 
 		oldFuncs.wndProc = (WNDPROC)GetWindowLongPtr(window, GWLP_WNDPROC);
 		SetWindowLongPtr(sd.OutputWindow, GWLP_WNDPROC, (LONG_PTR)WndProcHandler);
 		::GetWindowRect(sd.OutputWindow, &oldRect);
-		
 
 		if (GetWindowRect(sd.OutputWindow, &rect)) {
 			windowWidth = rect.right - rect.left;

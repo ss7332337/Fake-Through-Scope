@@ -301,7 +301,12 @@ namespace Hook
 
 		ComPtr<ID3D11Texture2D> mTextDDS;
 		ComPtr<ID3D11Resource> mTextDDS_Res;
-		ComPtr<ID3D11Texture2D> mBackBuffer;
+
+		ID3D11Texture2D* mBackBuffer;
+		ID3D11Texture2D* mBackBufferCopy;
+		ID3D11Texture2D* mRealBackBuffer;
+
+
 		ComPtr<ID3D11Texture2D> mDynamicTexture;
 		D3D11_TEXTURE2D_DESC bbDesc;
 
