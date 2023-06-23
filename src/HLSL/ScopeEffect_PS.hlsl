@@ -57,8 +57,10 @@ float4 main(float4 vpos : SV_Position, float2 texcoord : TEXCOORD0) : SV_Target
 	// * isRender;
 	//float4 colorFinal = color;
 	colorFinal*= isRender;
-	//colorFinal.a*= EnableMerge;
+	colorFinal.a*= EnableMerge;
 
+
+	//return float4(0,0,0,1 * isRender);
 	return colorFinal;
 }
 

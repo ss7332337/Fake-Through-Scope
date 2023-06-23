@@ -47,176 +47,6 @@ float nvIntensity_UI;
 float baseWeaponPos_UI;
 float MovePercentage_UI;
 
-const char* const mainKey[] = {
-	"None",
-	"Unknown",
-	"VK_LBUTTON",
-	"VK_RBUTTON",
-	"VK_CANCEL",
-	"VK_MBUTTON",
-	"VK_XBUTTON1",
-	"VK_XBUTTON2",
-	"Unknown",
-	"VK_BACK",
-	"VK_TAB",
-	"Unknown",
-	"Unknown",
-	"VK_CLEAR",
-	"VK_RETURN",
-	"Unknown",
-	"Unknown",
-	"VK_SHIFT",
-	"VK_CONTROL",
-	"VK_MENU",
-	"VK_PAUSE",
-	"VK_CAPITAL",
-	"VK_KANA",
-	"Unknown",
-	"VK_JUNJA",
-	"VK_FINAL",
-	"VK_KANJI",
-	"Unknown",
-	"VK_ESCAPE",
-	"VK_CONVERT",
-	"VK_NONCONVERT",
-	"VK_ACCEPT",
-	"VK_MODECHANGE",
-	"VK_SPACE",
-	"VK_PRIOR",
-	"VK_NEXT",
-	"VK_END",
-	"VK_HOME",
-	"VK_LEFT",
-	"VK_UP",
-	"VK_RIGHT",
-	"VK_DOWN",
-	"VK_SELECT",
-	"VK_PRINT",
-	"VK_EXECUTE",
-	"VK_SNAPSHOT",
-	"VK_INSERT",
-	"VK_DELETE",
-	"VK_HELP",
-	"0",
-	"1",
-	"2",
-	"3",
-	"4",
-	"5",
-	"6",
-	"7",
-	"8",
-	"9",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"A",
-	"B",
-	"C",
-	"D",
-	"E",
-	"F",
-	"G",
-	"H",
-	"I",
-	"J",
-	"K",
-	"L",
-	"M",
-	"N",
-	"O",
-	"P",
-	"Q",
-	"R",
-	"S",
-	"T",
-	"U",
-	"V",
-	"W",
-	"X",
-	"Y",
-	"Z",
-	"VK_LWIN",
-	"VK_RWIN",
-	"VK_APPS",
-	"Unknown",
-	"VK_SLEEP",
-	"VK_NUMPAD0",
-	"VK_NUMPAD1",
-	"VK_NUMPAD2",
-	"VK_NUMPAD3",
-	"VK_NUMPAD4",
-	"VK_NUMPAD5",
-	"VK_NUMPAD6",
-	"VK_NUMPAD7",
-	"VK_NUMPAD8",
-	"VK_NUMPAD9",
-	"VK_MULTIPLY",
-	"VK_ADD",
-	"VK_SEPARATOR",
-	"VK_SUBTRACT",
-	"VK_DECIMAL",
-	"VK_DIVIDE",
-	"VK_F1",
-	"VK_F2",
-	"VK_F3",
-	"VK_F4",
-	"VK_F5",
-	"VK_F6",
-	"VK_F7",
-	"VK_F8",
-	"VK_F9",
-	"VK_F10",
-	"VK_F11",
-	"VK_F12",
-	"VK_F13",
-	"VK_F14",
-	"VK_F15",
-	"VK_F16",
-	"VK_F17",
-	"VK_F18",
-	"VK_F19",
-	"VK_F20",
-	"VK_F21",
-	"VK_F22",
-	"VK_F23",
-	"VK_F24",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"VK_NUMLOCK",
-	"VK_SCROLL",
-	"VK_OEM_NEC_EQUAL",
-	"VK_OEM_FJ_MASSHOU",
-	"VK_OEM_FJ_TOUROKU",
-	"VK_OEM_FJ_LOYA",
-	"VK_OEM_FJ_ROYA",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"VK_LSHIFT",
-	"VK_RSHIFT",
-	"VK_LCONTROL",
-	"VK_RCONTROL",
-	"VK_LMENU",
-	"VK_RMENU"
-};
-
 static const char* current_item = NULL;
 static const char* current_itemA = NULL;
 
@@ -227,6 +57,7 @@ bool bDisableWhileBolt = false;
 bool bChangeAimTexture = true;
 bool bResetZoomDelta = false;
 bool bSelfDraw = false;
+bool bGetVSConstBuffer = false;
 
 int nvgComboKeyIndex = 0;
 int nvgMainKeyIndex = 0;
@@ -298,6 +129,22 @@ int countpscdescByteWidth = -1;
 int countindescByteWidth = -1;
 int countvedescByteWidth = -1;
 
+ID3D11Buffer* targetVertexConstBuffer;
+ID3D11Buffer* targetVertexConstBuffer1p5;
+ID3D11Buffer* targetVertexConstBuffer1;
+			
+ID3D11Buffer* targetVertexConstBufferOutPut;
+ID3D11Buffer* targetVertexConstBufferOutPut1p5;
+ID3D11Buffer* targetVertexConstBufferOutPut1;
+
+//ComPtr<ID3D11Buffer> targetVertexConstBuffer;
+//ComPtr<ID3D11Buffer> targetVertexConstBuffer1p5;
+//ComPtr<ID3D11Buffer> targetVertexConstBuffer1;
+//
+//ComPtr<ID3D11Buffer> targetVertexConstBufferOutPut;
+//ComPtr<ID3D11Buffer> targetVertexConstBufferOutPut1p5;
+//ComPtr<ID3D11Buffer> targetVertexConstBufferOutPut1;
+
 
 //RTVertex quadVertices[4] = {
 //	{ XMFLOAT3(-0.5f, -0.5f, 0.0f), XMFLOAT2(0.0f, 0.0f) },
@@ -311,6 +158,12 @@ struct RTVertex
 	XMFLOAT3 position;  // 位置
 	XMFLOAT2 texcoord;  // 纹理坐标
 };
+
+struct CopyCBUFFER
+{
+public:
+	float data[96];  // equivalent to 64 floats
+}copyCBUFFER;
 
 
 XMFLOAT4X4 localTestingMat = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
@@ -690,6 +543,19 @@ namespace Hook
 		HR(g_Device->CreateBuffer(&bd, &InitData, &gdc_pIndexBuffer));
 
 
+		D3D11_BUFFER_DESC outputDesc = {};
+		outputDesc.ByteWidth = 48;
+		outputDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		outputDesc.Usage = D3D11_USAGE_DYNAMIC;
+		outputDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		HR(g_Device->CreateBuffer(&outputDesc, nullptr, &targetVertexConstBufferOutPut));
+
+		outputDesc.ByteWidth = 384;
+		HR(g_Device->CreateBuffer(&outputDesc, nullptr, &targetVertexConstBufferOutPut1p5));
+
+		outputDesc.ByteWidth = 752;
+		HR(g_Device->CreateBuffer(&outputDesc, nullptr, &targetVertexConstBufferOutPut1));
+
 		CreateBlender();
 
 		return true;
@@ -780,6 +646,8 @@ namespace Hook
 		HR(g_Device->CreateRenderTargetView(mOutPutRTRenderTargetTexture.Get(), &renderTargetViewDesc, mOutPutRTRenderTargetView.GetAddressOf()));
 		HR(g_Device->CreateShaderResourceView(mOutPutRTRenderTargetTexture.Get(), &shaderResourceViewDesc, mOutPutRTShaderResourceView.GetAddressOf()));
 
+
+
 		
 	}
 
@@ -811,13 +679,7 @@ namespace Hook
 	UINT targetVertexBufferStrides;
 	UINT targetVertexBufferOffsets;
 
-	ComPtr<ID3D11Buffer> targetVertexConstBuffer;
-	ComPtr<ID3D11Buffer> targetVertexConstBuffer1p5;
-	ComPtr<ID3D11Buffer> targetVertexConstBuffer1;
-
-	ComPtr<ID3D11Buffer> targetVertexConstBufferOutPut;
-	ComPtr<ID3D11Buffer> targetVertexConstBufferOutPut1p5;
-	ComPtr<ID3D11Buffer> targetVertexConstBufferOutPut1;
+	
 	
 	ComPtr<ID3D11ShaderResourceView> DrawIndexedSRV;
 
@@ -827,10 +689,173 @@ namespace Hook
 	bool bHasGetBackBuffer = false;
 	ComPtr<ID3D11ShaderResourceView> targetSRV;
 
+	void CopyToOutput(ID3D11Buffer** pDstBuffer, ID3D11Buffer** pSrcBuffer, size_t bufferSize)
+	{
+		D3D11_MAPPED_SUBRESOURCE mapped = {};
+		HRESULT hr = g_Context->Map(*pSrcBuffer, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mapped);
+		if (hr == E_PENDING) {
+			_MESSAGE("E_PENDING");
+		} else if (FAILED(hr)) {
+			_MESSAGE("FAILED");
+		} else {
+			// Copy the buffer data to memory
+			memcpy(pDstBuffer, mapped.pData, sizeof(*pSrcBuffer));
+
+			// Unmap the source buffer
+			g_Context->Unmap(*pSrcBuffer, 0);
+		}
+	}
+
+	void D3D::UpdateScene()
+	{
+		auto currData = sdh->GetCurrentFTSData();
+
+		if (!currData)
+			return;
+
+		g_Context->OMSetRenderTargets(1, mRTRenderTargetView.GetAddressOf(), tempSV);
+
+		g_Context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
+		g_Context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
+
+		mBackBuffer->GetDesc(&bbDesc);
+		bbDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		bbDesc.CPUAccessFlags = 0;
+		bbDesc.Usage = D3D11_USAGE_DEFAULT;
+		bbDesc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
+
+		//HR(g_Device->CreateTexture2D(&bbDesc, nullptr, &mDynamicTexture));
+		g_Context->CopyResource(mBackBufferCopy, mBackBuffer);
+
+#pragma region FO4GameConstantBuffer
+
+		if (isEnableScopeEffect) {
+			scopeData.EnableMerge = 1;
+		} else if (!isEnableScopeEffect) {
+			scopeData.ScopeEffect_Zoom = currData->shaderData.minZoom;
+			scopeData.EnableMerge = 0;
+		}
+
+		float tempCamMat[4][4] = {
+			{ gameConstBuffer.camMat.entry[0].pt[0], gameConstBuffer.camMat.entry[0].pt[1], gameConstBuffer.camMat.entry[0].pt[2], 0 },
+			{ gameConstBuffer.camMat.entry[1].pt[0], gameConstBuffer.camMat.entry[1].pt[1], gameConstBuffer.camMat.entry[1].pt[2], 0 },
+			{ gameConstBuffer.camMat.entry[2].pt[0], gameConstBuffer.camMat.entry[2].pt[1], gameConstBuffer.camMat.entry[2].pt[2], 0 },
+			{ 0, 0, 0, 1 }
+		};
+
+		memcpy_s(&scopeData.CameraRotation, sizeof(float) * 16, tempCamMat, sizeof(float) * 16);
+		//scopeData.CameraRotation = tempCamMat;
+		scopeData.CurrRootPos = gameConstBuffer.rootPos.GetXMFLOAT3();
+		scopeData.CurrWeaponPos = gameConstBuffer.weaponPos.GetXMFLOAT3();
+		scopeData.eyeDirection = gameConstBuffer.virDir.GetXMFLOAT3();
+		scopeData.eyeDirectionLerp = { gameConstBuffer.VirDirLerp.x, gameConstBuffer.VirDirLerp.y, gameConstBuffer.VirDirLerp.z };
+		scopeData.eyeTranslationLerp = gameConstBuffer.VirTransLerp.GetXMFLOAT3();
+
+		if (bResetZoomDelta) {
+			gameZoomDelta = currData->shaderData.minZoom;
+			bResetZoomDelta = false;
+		}
+
+		if (gameZoomDelta >= currData->shaderData.maxZoom)
+			gameZoomDelta = currData->shaderData.maxZoom;
+		else if (gameZoomDelta <= currData->shaderData.minZoom)
+			gameZoomDelta = currData->shaderData.minZoom;
+
+		scopeData.ScopeEffect_Zoom = gameZoomDelta;
+		scopeData.GameFov = pcam->firstPersonFOV;
+#pragma endregion
+
+#pragma region MyScopeShaderData
+		if (!bEnableEditMode) {
+			scopeData.BaseWeaponPos = currData->shaderData.baseWeaponPos;
+			scopeData.camDepth = currData->shaderData.camDepth;
+			scopeData.EnableNV = currData->shaderData.bCanEnableNV ? bEnableNVG : 0;
+			scopeData.EnableZMove = currData->shaderData.bEnableZMove;
+			scopeData.isCircle = currData->shaderData.IsCircle;
+			scopeData.MovePercentage = currData->shaderData.movePercentage;
+			scopeData.nvIntensity = currData->shaderData.nvIntensity;
+			scopeData.parallax_maxTravel = currData->shaderData.parallax.maxTravel;
+			scopeData.parallax_Radius = currData->shaderData.parallax.radius;
+			scopeData.parallax_relativeFogRadius = currData->shaderData.parallax.relativeFogRadius;
+			scopeData.parallax_scopeSwayAmount = currData->shaderData.parallax.scopeSwayAmount;
+			scopeData.ReticleSize = currData->shaderData.ReticleSize;
+			scopeData.ScopeEffect_Offset = { currData->shaderData.PositionOffset[0], currData->shaderData.PositionOffset[1] };
+			scopeData.ScopeEffect_OriPositionOffset = { currData->shaderData.OriPositionOffset[0], currData->shaderData.OriPositionOffset[1] };
+			scopeData.ScopeEffect_OriSize = { currData->shaderData.OriSize[0], currData->shaderData.OriSize[1] };
+			scopeData.ScopeEffect_Size = { currData->shaderData.Size[0], currData->shaderData.Size[1] };
+
+			vsConstanData.CurrRootPos = gameConstBuffer.rootPos.GetXMFLOAT3();
+			vsConstanData.CurrWeaponPos = gameConstBuffer.weaponPos.GetXMFLOAT3();
+			vsConstanData.eyeDirection = gameConstBuffer.virDir.GetXMFLOAT3();
+			vsConstanData.eyeDirectionLerp = gameConstBuffer.VirDirLerp.GetXMFLOAT3();
+			vsConstanData.MovePercentage1 = currData->shaderData.movePercentage;
+			memcpy_s(&vsConstanData.CameraRotation, sizeof(float) * 16, tempCamMat, sizeof(float) * 16);
+		}
+#pragma endregion
+
+		D3D11_MAPPED_SUBRESOURCE mappedDataA;
+		HR(g_Context->Map(instance().m_pScopeEffectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataA));
+		memcpy_s(mappedDataA.pData, sizeof(ScopeEffectShaderData), &instance().scopeData, sizeof(ScopeEffectShaderData));
+		g_Context->Unmap(instance().m_pScopeEffectBuffer.Get(), 0);
+
+		D3D11_MAPPED_SUBRESOURCE mappedDataB;
+		HR(g_Context->Map(instance().m_VSBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataB));
+		memcpy_s(mappedDataB.pData, sizeof(VSConstantData), &instance().vsConstanData, sizeof(VSConstantData));
+		g_Context->Unmap(instance().m_VSBuffer.Get(), 0);
+
+		constBufferData.width = windowWidth;
+		constBufferData.height = windowHeight;
+
+		D3D11_MAPPED_SUBRESOURCE mappedData;
+		HR(g_Context->Map(instance().m_pConstantBufferData.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData));
+		memcpy_s(mappedData.pData, sizeof(VSConstantData), &instance().constBufferData, sizeof(VSConstantData));
+		g_Context->Unmap(instance().m_pConstantBufferData.Get(), 0);
+
+		if (bChangeAimTexture) {
+			if (instance().mTextDDS_SRV)
+					instance().mTextDDS_SRV.ReleaseAndGetAddressOf();
+
+			//g_Context->PSSetShaderResources(5, 1, nullptr);
+			const wchar_t* tempPath;
+			auto tempWchar = GetWC(currData->ZoomNodePath.c_str());
+			tempPath = currData->ZoomNodePath.empty() ? L"Data/Textures/FTS/Empty.dds" : tempWchar;
+			HR(CreateDDSTextureFromFile(g_Device.Get(), tempPath, nullptr, instance().mTextDDS_SRV.GetAddressOf()));
+
+			if (tempWchar)
+					free((void*)tempWchar);
+			bChangeAimTexture = false;
+		}
+
+		UINT stride = sizeof(Vertex);
+		UINT offset = 0;
+
+		// 指定图元类型为三角形列表
+		g_Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+		g_Context->OMSetBlendState(BSTransparent.Get(), nullptr, 0xFFFFFFFF);
+		g_Context->IASetInputLayout(gdc_pVertexLayout);
+		g_Context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
+		g_Context->VSSetConstantBuffers(1, 1, m_VSBuffer.GetAddressOf());
+
+		g_Context->PSSetConstantBuffers(0, 1, m_pScopeEffectBuffer.GetAddressOf());
+		g_Context->PSSetConstantBuffers(2, 1, m_pConstantBufferData.GetAddressOf());
+
+		g_Context->PSSetShaderResources(4, 1, instance().mShaderResourceView.GetAddressOf());
+		g_Context->PSSetShaderResources(5, 1, instance().mTextDDS_SRV.GetAddressOf());
+
+		g_Context->IASetIndexBuffer(gdc_pIndexBuffer, DXGI_FORMAT_R32_UINT, offset);
+		g_Context->IASetVertexBuffers(0, 1, &gdc_pVertexBuffer, &stride, &offset);
+
+		g_Context->DrawIndexed(3, 0, 0);
+
+		//g_Context->OMSetRenderTargets(1, &tempRt, tempSV);
+	}
 
 	void D3D::RenderToReticleTextureNew(UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation)
 	{
-		if (!bIsFirst && isEnableRender && targetVS.Get())
+		if (!bIsFirst && isEnableRender && targetVS.Get() && targetVertexConstBufferOutPut 
+			//&& targetVertexConstBufferOutPut1p5.Get() && targetVertexConstBufferOutPut1.Get()
+			)
 		{
 			
 
@@ -851,6 +876,7 @@ namespace Hook
 			ID3D11Texture2D* pDstTexture = nullptr;
 			ID3D11ShaderResourceView* pDstView = nullptr;
 			D3D11_TEXTURE2D_DESC texDesc = {};
+
 			texDesc.Width = outPutWidth;
 			texDesc.Height = outPutHeight;
 			texDesc.MipLevels = 1;
@@ -940,18 +966,29 @@ namespace Hook
 			tempDSD.BackFace = tempDSOPD;
 
 
+
 			HR(g_Device->CreateDepthStencilState(&tempDSD, targetDepthStencilState.GetAddressOf()));
 
 			g_Context->OMSetDepthStencilState(targetDepthStencilState.Get(), 0);
 
 			g_Context->IASetInputLayout(targetInputLayout.Get());
-			g_Context->VSSetConstantBuffers(1, 1, targetVertexConstBuffer.GetAddressOf());
+
+			g_Context->VSSetConstantBuffers(1, 1, &targetVertexConstBufferOutPut);
+			g_Context->VSSetConstantBuffers(2, 1, &targetVertexConstBufferOutPut1p5);
+
+
+			//g_Context->VSSetConstantBuffers(12, 1, targetVertexConstBufferOutPut1.GetAddressOf());
+			
+			/*g_Context->VSSetConstantBuffers(1, 1, targetVertexConstBuffer.GetAddressOf());
 			g_Context->VSSetConstantBuffers(2, 1, targetVertexConstBuffer1p5.GetAddressOf());
-			g_Context->VSSetConstantBuffers(12, 1, targetVertexConstBuffer1.GetAddressOf());
+			g_Context->VSSetConstantBuffers(12, 1, targetVertexConstBuffer1.GetAddressOf());*/
+
 			g_Context->IASetIndexBuffer(targetIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, targetIndexBufferOffset);
 			g_Context->IASetVertexBuffers(0, 1, targetVertexBuffer.GetAddressOf(), &targetVertexBufferStrides, &targetVertexBufferOffsets);
 
 			g_Context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
+			/*g_Context->PSSetShaderResources(0, 1, mShaderResourceView.GetAddressOf());
+			g_Context->PSSetShaderResources(5, 1, mShaderResourceView.GetAddressOf());*/
 			g_Context->PSSetShaderResources(0, 1, &pDstView);
 			g_Context->PSSetShaderResources(5, 1, &pDstView);
 
@@ -969,219 +1006,104 @@ namespace Hook
 			targetVertexConstBufferOutPut1p5->Release();
 			targetVertexConstBufferOutPut1->Release();*/
 			
-			g_Context->OMSetRenderTargets(1, &tempRt, tempSV);
+			
 		}
 			
 	}
 
-	void D3D::UpdateScene()
+	static int copyCount = 0;
+
+	void __stdcall D3D::DrawIndexedHook(ID3D11DeviceContext* pContext, UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation)
 	{
-		auto currData = sdh->GetCurrentFTSData();
+		bool needToBeCull = false;
 
-		if (!currData)
-			return;
+		if (!bSelfDraw && isEnableRender) {
+			pContext->IAGetVertexBuffers(0, 1, &veBuffer, &Stride, &veBufferOffset);
+			if (veBuffer != NULL)
+				veBuffer->GetDesc(&vedesc);
+			if (veBuffer != NULL) {
+				veBuffer->Release();
+				veBuffer = NULL;
+			}
 
-		g_Context->OMGetRenderTargets(1, &tempRt, &tempSV);
-
-
-		g_Context->OMSetRenderTargets(1, mRTRenderTargetView.GetAddressOf(), tempSV);
-
-
-		g_Context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
-		g_Context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
-
-		
-		mBackBuffer->GetDesc(&bbDesc);
-		bbDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-		bbDesc.CPUAccessFlags = 0;
-		bbDesc.Usage = D3D11_USAGE_DEFAULT;
-		bbDesc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
-
-		//HR(g_Device->CreateTexture2D(&bbDesc, nullptr, &mDynamicTexture));
-		g_Context->CopyResource(mBackBufferCopy, mBackBuffer);
-
-#pragma region FO4GameConstantBuffer
+			pContext->IAGetIndexBuffer(&inBuffer, &inFormat, &inOffset);
+			if (inBuffer != NULL)
+				inBuffer->GetDesc(&indesc);
+			if (inBuffer != NULL) {
+				inBuffer->Release();
+				inBuffer = NULL;
+			}
 
 
-		if (isEnableScopeEffect) 
-		{
-			scopeData.EnableMerge = 1;
-		} 
-		else if (!isEnableScopeEffect) 
-		{
-			scopeData.ScopeEffect_Zoom = currData->shaderData.minZoom;
-			scopeData.EnableMerge = 0;
+			if (20 == Stride && 24 == IndexCount && indesc.ByteWidth == 0x0000000008000000 && vedesc.ByteWidth == 0x0000000008000000) {
+				pContext->VSGetShader(targetVS.GetAddressOf(), targetVSClassInstance.GetAddressOf(), &targetVSNumClassesInstance);
+				pContext->PSGetShader(targetPS.GetAddressOf(), 0, 0);
+				pContext->OMGetDepthStencilState(targetDepthStencilState.GetAddressOf(), 0);
+				pContext->IAGetInputLayout(targetInputLayout.GetAddressOf());
+				pContext->PSGetConstantBuffers(1, 2, &pscBuffer);
+				pContext->IAGetIndexBuffer(targetIndexBuffer.GetAddressOf(), &targetIndexBufferFormat, &targetIndexBufferOffset);
+				pContext->IAGetVertexBuffers(0, 1, targetVertexBuffer.GetAddressOf(), &targetVertexBufferStrides, &targetVertexBufferOffsets);
+
+				pContext->VSGetConstantBuffers(1, 1, &targetVertexConstBuffer);
+				pContext->VSGetConstantBuffers(2, 1, &targetVertexConstBuffer1p5);
+				//pContext->VSGetConstantBuffers(12, 1, targetVertexConstBuffer1.GetAddressOf());
+
+				D3D11_BUFFER_DESC buffer1Desc;
+				//targetVertexConstBuffer1->GetDesc(&buffer1Desc);
+
+				pContext->PSGetShaderResources(0, 1, DrawIndexedSRV.GetAddressOf());
+
+				ID3D11Resource* pResource;
+				DrawIndexedSRV->GetResource(&pResource);
+				D3D11_SHADER_RESOURCE_VIEW_DESC tempSRVDesc;
+				DrawIndexedSRV->GetDesc(&tempSRVDesc);
+
+				// 获取资源的类型
+				D3D11_RESOURCE_DIMENSION dimension;
+				pResource->GetType(&dimension);
+
+				// 检查是否是 2D 纹理
+				if (dimension == D3D11_RESOURCE_DIMENSION_TEXTURE2D) {
+						// 使用 QueryInterface 获取 ID3D11Texture2D 接口的指针
+						ID3D11Texture2D* pTexture2D = nullptr;
+						HRESULT hr = pResource->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&pTexture2D);
+						if (SUCCEEDED(hr)) {
+							// 获取纹理描述
+							D3D11_TEXTURE2D_DESC desc;
+							pTexture2D->GetDesc(&desc);
+
+							if (desc.Width == 2048 && desc.ArraySize == 1 && tempSRVDesc.Format == DXGI_FORMAT_BC2_UNORM_SRGB && tempSRVDesc.Texture2D.MipLevels == 1 && tempSRVDesc.ViewDimension == D3D11_SRV_DIMENSION_TEXTURE2D) {
+								if (targetVertexConstBuffer 
+									&& targetVertexConstBuffer1p5
+									//&& targetVertexConstBuffer1
+									)
+								{
+
+									g_Context->CopyResource(targetVertexConstBufferOutPut, targetVertexConstBuffer);
+									g_Context->CopyResource(targetVertexConstBufferOutPut1p5, targetVertexConstBuffer1p5);
+
+								}
+
+								targetIndexCount = IndexCount;
+								targetStartIndexLocation = StartIndexLocation;
+								targetBaseVertexLocation = BaseVertexLocation;
+
+								/*ID3D11DepthStencilView* tempDSV1;
+								g_Context->OMGetRenderTargets(1, nullptr, &tempDSV1);
+								g_Context->ClearDepthStencilView(tempDSV1, 0, 0, 0);*/
+
+								return g_Context->DrawIndexedInstanced(24, 0, 0, 0, 0);
+							}
+
+							pTexture2D->Release();
+						}
+				}
+			}
 		}
 
-		float tempCamMat[4][4] = {
-			{ gameConstBuffer.camMat.entry[0].pt[0], gameConstBuffer.camMat.entry[0].pt[1], gameConstBuffer.camMat.entry[0].pt[2] ,0},
-			{ gameConstBuffer.camMat.entry[1].pt[0], gameConstBuffer.camMat.entry[1].pt[1], gameConstBuffer.camMat.entry[1].pt[2] ,0},
-			{ gameConstBuffer.camMat.entry[2].pt[0], gameConstBuffer.camMat.entry[2].pt[1], gameConstBuffer.camMat.entry[2].pt[2] ,0},
-			{ 0, 0, 0 ,1}
-		};
-
-
-		memcpy_s(&scopeData.CameraRotation, sizeof(float) * 16, tempCamMat, sizeof(float) * 16);
-		//scopeData.CameraRotation = tempCamMat;
-		scopeData.CurrRootPos = gameConstBuffer.rootPos.GetXMFLOAT3();
-		scopeData.CurrWeaponPos = gameConstBuffer.weaponPos.GetXMFLOAT3();
-		scopeData.eyeDirection = gameConstBuffer.virDir.GetXMFLOAT3();
-		scopeData.eyeDirectionLerp = { gameConstBuffer.VirDirLerp.x, gameConstBuffer.VirDirLerp.y, gameConstBuffer.VirDirLerp.z };
-		scopeData.eyeTranslationLerp = gameConstBuffer.VirTransLerp.GetXMFLOAT3();
-
-		if (bResetZoomDelta) {
-			gameZoomDelta = currData->shaderData.minZoom;
-			bResetZoomDelta = false;
-		}
-
-		if (gameZoomDelta >= currData->shaderData.maxZoom)
-			gameZoomDelta = currData->shaderData.maxZoom;
-		else if (gameZoomDelta <= currData->shaderData.minZoom)
-			gameZoomDelta = currData->shaderData.minZoom;
-
-		scopeData.ScopeEffect_Zoom = gameZoomDelta;
-		scopeData.GameFov = pcam->firstPersonFOV;
-#pragma endregion
-
-		
-#pragma region MyScopeShaderData
-		if (!bEnableEditMode) {
-			scopeData.BaseWeaponPos = currData->shaderData.baseWeaponPos;
-			scopeData.camDepth = currData->shaderData.camDepth;
-			scopeData.EnableNV = currData->shaderData.bCanEnableNV ? bEnableNVG : 0;
-			scopeData.EnableZMove = currData->shaderData.bEnableZMove;
-			scopeData.isCircle = currData->shaderData.IsCircle;
-			scopeData.MovePercentage = currData->shaderData.movePercentage;
-			scopeData.nvIntensity = currData->shaderData.nvIntensity;
-			scopeData.parallax_maxTravel = currData->shaderData.parallax.maxTravel;
-			scopeData.parallax_Radius = currData->shaderData.parallax.radius;
-			scopeData.parallax_relativeFogRadius = currData->shaderData.parallax.relativeFogRadius;
-			scopeData.parallax_scopeSwayAmount = currData->shaderData.parallax.scopeSwayAmount;
-			scopeData.ReticleSize = currData->shaderData.ReticleSize;
-			scopeData.ScopeEffect_Offset = { currData->shaderData.PositionOffset[0], currData->shaderData.PositionOffset[1] };
-			scopeData.ScopeEffect_OriPositionOffset = { currData->shaderData.OriPositionOffset[0], currData->shaderData.OriPositionOffset[1] };
-			scopeData.ScopeEffect_OriSize = { currData->shaderData.OriSize[0], currData->shaderData.OriSize[1] };
-			scopeData.ScopeEffect_Size = { currData->shaderData.Size[0], currData->shaderData.Size[1] };
-
-			vsConstanData.CurrRootPos = gameConstBuffer.rootPos.GetXMFLOAT3();
-			vsConstanData.CurrWeaponPos = gameConstBuffer.weaponPos.GetXMFLOAT3();
-			vsConstanData.eyeDirection = gameConstBuffer.virDir.GetXMFLOAT3();
-			vsConstanData.eyeDirectionLerp = gameConstBuffer.VirDirLerp.GetXMFLOAT3();
-			vsConstanData.MovePercentage1 = currData->shaderData.movePercentage;
-			memcpy_s(&vsConstanData.CameraRotation, sizeof(float) * 16, tempCamMat, sizeof(float) * 16);
-
-		}
-#pragma endregion
-
-		D3D11_MAPPED_SUBRESOURCE mappedDataA;
-		HR(g_Context->Map(instance().m_pScopeEffectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataA));
-		memcpy_s(mappedDataA.pData, sizeof(ScopeEffectShaderData), &instance().scopeData, sizeof(ScopeEffectShaderData));
-		g_Context->Unmap(instance().m_pScopeEffectBuffer.Get(), 0);
-
-		D3D11_MAPPED_SUBRESOURCE mappedDataB;
-		HR(g_Context->Map(instance().m_VSBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataB));
-		memcpy_s(mappedDataB.pData, sizeof(VSConstantData), &instance().vsConstanData, sizeof(VSConstantData));
-		g_Context->Unmap(instance().m_VSBuffer.Get(), 0);
-
-		constBufferData.width = windowWidth;
-		constBufferData.height = windowHeight;
-
-		D3D11_MAPPED_SUBRESOURCE mappedData;
-		HR(g_Context->Map(instance().m_pConstantBufferData.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData));
-		memcpy_s(mappedData.pData, sizeof(VSConstantData), &instance().constBufferData, sizeof(VSConstantData));
-		g_Context->Unmap(instance().m_pConstantBufferData.Get(), 0);
-
-		
-
-		if (bChangeAimTexture) {
-			if (instance().mTextDDS_SRV)
-					instance().mTextDDS_SRV.ReleaseAndGetAddressOf();
-
-			//g_Context->PSSetShaderResources(5, 1, nullptr);
-			const wchar_t* tempPath;
-			auto tempWchar = GetWC(currData->ZoomNodePath.c_str());
-			tempPath = currData->ZoomNodePath.empty() ? L"Data/Textures/FTS/Empty.dds" : tempWchar;
-			HR(CreateDDSTextureFromFile(g_Device.Get(), tempPath, nullptr, instance().mTextDDS_SRV.GetAddressOf()));
-			
-			if (tempWchar)
-				free((void*)tempWchar);
-			bChangeAimTexture = false;
-		}
-
-		
-
-		UINT stride = sizeof(Vertex);
-		UINT offset = 0;
-		
-
-		// 指定图元类型为三角形列表
-		g_Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		
-		g_Context->OMSetBlendState(BSTransparent.Get(), nullptr, 0xFFFFFFFF);
-		g_Context->IASetInputLayout(gdc_pVertexLayout);
-		g_Context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
-		g_Context->VSSetConstantBuffers(1, 1, m_VSBuffer.GetAddressOf());
-
-		g_Context->PSSetConstantBuffers(0, 1, m_pScopeEffectBuffer.GetAddressOf());
-		g_Context->PSSetConstantBuffers(2, 1, m_pConstantBufferData.GetAddressOf());
-
-		
-		g_Context->PSSetShaderResources(4, 1, instance().mShaderResourceView.GetAddressOf());
-		g_Context->PSSetShaderResources(5, 1, instance().mTextDDS_SRV.GetAddressOf());
-
-		
-
-		
-		g_Context->IASetIndexBuffer(gdc_pIndexBuffer, DXGI_FORMAT_R32_UINT, offset);
-		g_Context->IASetVertexBuffers(0, 1, &gdc_pVertexBuffer, &stride, &offset);
-
-		g_Context->DrawIndexed(3, 0, 0);
-
-
-		g_Context->OMSetRenderTargets(1, &tempRt, tempSV);
-		
-
+		return oldFuncs.drawIndexed(pContext, IndexCount, StartIndexLocation, BaseVertexLocation);
 	}
 
-	/// <summary>
-	/// 未使用
-	/// </summary>
-	void D3D::CreateRenderTarget()
-	{
-		D3D11_TEXTURE2D_DESC textureDesc;
-		ZeroMemory(&textureDesc, sizeof(textureDesc));
-
-		textureDesc.Width = 2048;
-		textureDesc.Height = 2048;
-		textureDesc.MipLevels = 1;
-		textureDesc.ArraySize = 1;
-		textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;  //纹理像素为12个字节
-		textureDesc.SampleDesc.Count = 1;
-		textureDesc.Usage = D3D11_USAGE_DEFAULT;
-		textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-		textureDesc.CPUAccessFlags = 0;
-		textureDesc.MiscFlags = 0;
-
-		HR(g_Device->CreateTexture2D(&textureDesc, NULL, instance().mRTRenderTargetTexture.GetAddressOf()));
-
-		//第二，填充渲染目标视图形容体,并进行创建目标渲染视图
-		D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc;
-
-		renderTargetViewDesc.Format = textureDesc.Format;
-		renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-		renderTargetViewDesc.Texture2D.MipSlice = 0;
-		HR(g_Device->CreateRenderTargetView(instance().mRTRenderTargetTexture.Get(), &renderTargetViewDesc, mRTRenderTargetView.GetAddressOf()));
-
-		//第三,填充着色器资源视图形容体,并进行创建着色器资源视图
-		D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
-		shaderResourceViewDesc.Format = textureDesc.Format;
-		shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
-		shaderResourceViewDesc.Texture2D.MipLevels = 1;
-
-		HR(g_Device->CreateShaderResourceView(instance().mRTRenderTargetTexture.Get(), &shaderResourceViewDesc, mShaderResourceView.GetAddressOf()));
-
-	}
 
 	void D3D::Render()
 	{
@@ -1216,9 +1138,13 @@ namespace Hook
 					
 					bIsFirst = false;
 				}
-				
+				g_Context->OMGetRenderTargets(1, &tempRt, &tempSV);
 
 				UpdateScene();
+				instance().RenderToReticleTextureNew(targetIndexCount, targetStartIndexLocation, targetBaseVertexLocation);
+				g_Context->OMSetRenderTargets(1, &tempRt, tempSV);
+
+
 				bHasDraw = true;
 			}
 		}
@@ -1526,115 +1452,31 @@ namespace Hook
 		}
 
 	}
-	
-
-
-	
-	void __stdcall D3D::DrawIndexedHook(ID3D11DeviceContext* pContext, UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation)
-	{
-		bool needToBeCull = false;
-
-		if (!bSelfDraw && isEnableRender) 
-		{
-		
-			pContext->IAGetVertexBuffers(0, 1, &veBuffer, &Stride, &veBufferOffset);
-			if (veBuffer != NULL)
-				veBuffer->GetDesc(&vedesc);
-			if (veBuffer != NULL) {
-				veBuffer->Release();
-				veBuffer = NULL;
-			}
-
-
-			pContext->IAGetIndexBuffer(&inBuffer, &inFormat, &inOffset);
-			if (inBuffer != NULL)
-				inBuffer->GetDesc(&indesc);
-			if (inBuffer != NULL) {
-				inBuffer->Release();
-				inBuffer = NULL;
-			}
-
-
-			//!!!!!WARNING!!!!!!
-			//Crash while using Weapons Workbench
-		
-			if (20 == Stride && 24 == IndexCount && indesc.ByteWidth == 0x0000000008000000 && vedesc.ByteWidth == 0x0000000008000000) 
-			{
-				pContext->VSGetShader(targetVS.GetAddressOf(), targetVSClassInstance.GetAddressOf(), &targetVSNumClassesInstance);
-				pContext->PSGetShader(targetPS.GetAddressOf(), 0, 0);
-				pContext->OMGetDepthStencilState(targetDepthStencilState.GetAddressOf(), 0);
-				pContext->IAGetInputLayout(targetInputLayout.GetAddressOf());
-				pContext->PSGetConstantBuffers(1, 2, &pscBuffer);
-				pContext->IAGetIndexBuffer(targetIndexBuffer.GetAddressOf(), &targetIndexBufferFormat, &targetIndexBufferOffset);
-				pContext->IAGetVertexBuffers(0, 1, targetVertexBuffer.GetAddressOf(), &targetVertexBufferStrides, &targetVertexBufferOffsets);
-
-				pContext->VSGetConstantBuffers(1, 1, targetVertexConstBuffer.GetAddressOf());
-				pContext->VSGetConstantBuffers(2, 1, targetVertexConstBuffer1p5.GetAddressOf());
-				pContext->VSGetConstantBuffers(12, 1, targetVertexConstBuffer1.GetAddressOf());
-
-				D3D11_BUFFER_DESC buffer1Desc;
-				targetVertexConstBuffer1->GetDesc(&buffer1Desc);
-				
-
-				pContext->PSGetShaderResources(0, 1, DrawIndexedSRV.GetAddressOf());
-				
-
-
-				ID3D11Resource* pResource;
-				DrawIndexedSRV->GetResource(&pResource);
-				D3D11_SHADER_RESOURCE_VIEW_DESC tempSRVDesc;
-				DrawIndexedSRV->GetDesc(&tempSRVDesc);
-
-				// 获取资源的类型
-				D3D11_RESOURCE_DIMENSION dimension;
-				pResource->GetType(&dimension);
-
-				// 检查是否是 2D 纹理
-				if (dimension == D3D11_RESOURCE_DIMENSION_TEXTURE2D) {
-					// 使用 QueryInterface 获取 ID3D11Texture2D 接口的指针
-					ID3D11Texture2D* pTexture2D = nullptr;
-					HRESULT hr = pResource->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&pTexture2D);
-					if (SUCCEEDED(hr)) {
-						// 获取纹理描述
-						D3D11_TEXTURE2D_DESC desc;
-						pTexture2D->GetDesc(&desc);
-
-						if (desc.Width == 2048 && tempSRVDesc.Format == DXGI_FORMAT_BC2_UNORM_SRGB && tempSRVDesc.Texture2D.MipLevels == 1 && tempSRVDesc.ViewDimension == D3D11_SRV_DIMENSION_TEXTURE2D) {
-							if (targetVertexConstBuffer && targetVertexConstBuffer1p5 && targetVertexConstBuffer1) {
-								targetVertexConstBuffer.CopyTo(targetVertexConstBufferOutPut.GetAddressOf());
-								targetVertexConstBuffer1p5.CopyTo(targetVertexConstBufferOutPut1p5.GetAddressOf());
-								targetVertexConstBuffer1.CopyTo(targetVertexConstBufferOutPut1.GetAddressOf());
-							}
-
-							targetIndexCount = IndexCount;
-							targetStartIndexLocation = StartIndexLocation;
-							targetBaseVertexLocation = BaseVertexLocation;
-
-							return g_Context->DrawIndexedInstanced(24, 0, 0, 0, 0);
-						}
-
-						pTexture2D->Release();
-					}
-				}
-
-
-				
-			}
-		}
-		
-
-		return oldFuncs.drawIndexed(pContext, IndexCount, StartIndexLocation, BaseVertexLocation);
-
-	}
-
 	inline void** get_vtable_ptr(void* obj)
 	{
 		return *reinterpret_cast<void***>(obj);
 	}
 
+	HRESULT __stdcall Hook::D3D::CreateBufferHook(ID3D11Device* pDevice, D3D11_BUFFER_DESC const* pDesc, D3D11_SUBRESOURCE_DATA const* pSubresource, ID3D11Buffer** pBuffer)
+	{
+		//_MESSAGE("CreateBufferHook");
+		/*if (pDesc->ByteWidth == 384 && (pDesc->BindFlags & D3D11_BIND_CONSTANT_BUFFER) && pDesc->CPUAccessFlags == D3D11_CPU_ACCESS_WRITE && pDesc->Usage == D3D11_USAGE_DYNAMIC)
+		{
+			D3D11_BUFFER_DESC newDesc = *pDesc;
+			newDesc.ByteWidth = 384;
+			newDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+			newDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE;
+			newDesc.Usage = pDesc->Usage;
+			newDesc.MiscFlags = pDesc->MiscFlags;
+			newDesc.StructureByteStride = pDesc->StructureByteStride;
+			_MESSAGE("FOUND!!!!");
+		}*/
+		return oldFuncs.createBuffer(pDevice, pDesc, pSubresource, pBuffer);
+	}
+
 	HRESULT __stdcall D3D::PresentHook(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
 	{
-		//void** swapChainVTable = get_vtable_ptr(g_Context.Get());
+		void** swapChainVTable = get_vtable_ptr(g_Device.Get());
 
 		bSelfDraw = false;
 		if (!isActive_TAA)
@@ -1661,7 +1503,7 @@ namespace Hook
 
 			func(This, a2, a3);
 			instance().Render();
-			instance().RenderToReticleTextureNew(targetIndexCount, targetStartIndexLocation, targetBaseVertexLocation);
+			
 
 			//if (instance().mShaderResourceView)
 			//	instance().mShaderResourceView.ReleaseAndGetAddressOf();
@@ -1715,6 +1557,8 @@ namespace Hook
 
 	void __stdcall D3D::vsSetConstantBuffers(ID3D11DeviceContext* pContext, UINT StartSlot, UINT NumBuffers, ID3D11Buffer* const* ppConstantBuffers)
 	{
+
+
 		oldFuncs.vsSetConstantBuffers(pContext, StartSlot, NumBuffers, ppConstantBuffers);
 	}
 
@@ -1733,16 +1577,6 @@ namespace Hook
 		return true;
 	}
 
-	//Still not working
-	void D3D::InstallDrawIndexedHook(ID3D11Device* device, ID3D11DeviceContext* context)
-	{
-		sdh = ScopeData::ScopeDataHandler::GetSingleton();
-		g_Context = context;
-
-		std::uintptr_t* vtbl = (std::uintptr_t*)(g_Context.Get());
-		vtbl = (std::uintptr_t*)vtbl[0];
-		HookFunc(vtbl, 12, (std::uintptr_t)DrawIndexedHook, (std::uintptr_t*)&oldFuncs.drawIndexed);
-	}
 
 
 	HRESULT __stdcall D3D::D3D11CreateDeviceAndSwapChainHook(IDXGIAdapter* pAdapter,
@@ -1768,17 +1602,21 @@ namespace Hook
 		g_Device = *ppDevice;
 		g_Swapchain = *ppSwapChain;
 
+		
+
 		std::uintptr_t* vtbl1 = (std::uintptr_t*)(*ppSwapChain);
 		vtbl1 = (std::uintptr_t*)vtbl1[0];
 		HookFunc(vtbl1, 8, (std::uintptr_t)PresentHook, (std::uintptr_t*)&oldFuncs.d3dPresent);
+
+		std::uintptr_t* vtbl2 = (std::uintptr_t*)(*ppDevice);
+		vtbl2 = (std::uintptr_t*)vtbl2[0];
+		HookFunc(vtbl2, 3, (std::uintptr_t)CreateBufferHook, (std::uintptr_t*)&oldFuncs.createBuffer);
 
 		std::uintptr_t* vtbl = (std::uintptr_t*)(g_Context.Get());
 		vtbl = (std::uintptr_t*)vtbl[0];
 
 		//won't work without a modified dxgi.dll or d3d11.dll
 		HookFunc(vtbl, 12, (std::uintptr_t)DrawIndexedHook, (std::uintptr_t*)&oldFuncs.drawIndexed);
-
-		//This one working
 		//HookFunc(vtbl, 7, (std::uintptr_t)vsSetConstantBuffers, (std::uintptr_t*)&oldFuncs.vsSetConstantBuffers);
 
 		/*IDXGISwapChain* mSwapChain;

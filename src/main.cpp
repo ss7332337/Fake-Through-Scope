@@ -527,6 +527,10 @@ void HookedUpdate()
 				
 			}
 
+			if (!IsInADS(player))
+			{
+				hookIns->EnableRender(false);
+			}
 		}
 	}
 	
@@ -653,8 +657,6 @@ public:
 			
 		} 
 		else{
-			hookIns->EnableRender(false);
-			hookIns->QueryRender(false);
 
 			hasUpdateSighted = false;
 			hasEjectShellCasing = false;
