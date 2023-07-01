@@ -320,7 +320,11 @@ namespace Hook
 			XMFLOAT3 CurrRootPos = { 0, 0, 0 };
 			float padding5 = 0;
 			XMFLOAT4X4 CameraRotation = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-			
+
+			XMFLOAT2 FTS_ScreenPos = { 0, 0 };
+			XMFLOAT2 padding6 = { 0, 0 };
+
+			XMFLOAT4X4 projMat;	
 		};
 
 		struct GameConstBuffer
@@ -331,6 +335,7 @@ namespace Hook
 			RE::NiPoint3 VirTransLerp;
 			RE::NiPoint3 weaponPos;
 			RE::NiPoint3 rootPos;
+			RE::NiPoint3 ftsScreenPos;
 			RE::NiMatrix3 camMat;
 			RE::NiMatrix3 ftsLocalMat;
 			RE::NiMatrix3 ftsWorldMat;
@@ -358,7 +363,8 @@ namespace Hook
 		void RenderToReticleTexture();
 		void RenderToReticleTextureNew(UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation);
 		static void InstallDrawIndexedHook(ID3D11Device* device, ID3D11DeviceContext* context);
-
+		RE::NiPoint3 CalculateScreenPoint(RE::NiAVObject* cam, RE::NiAVObject* obj, float fov);
+		RE::NiPoint3 WorldToScreen(RE::NiAVObject* cam, RE::NiAVObject* obj, float fov);
 
 	private:
 		D3D() {}

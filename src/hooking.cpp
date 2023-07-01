@@ -111,6 +111,9 @@ int windowWidth;
 int windowHeight;
 
 XMVECTORF32 bgColor = { 0.1f, 0.1f, 0.1f, 0.0f };
+const float NEAR_PLANE = 0.1f;    // Near clipping plane distance
+const float FAR_PLANE = 1000.0f;  // Far clipping plane distance
+
 long unsigned int gCaptureNum = 0;
 
 bool isEnableScopeEffect = false;
@@ -137,21 +140,6 @@ ID3D11Buffer* targetVertexConstBufferOutPut;
 ID3D11Buffer* targetVertexConstBufferOutPut1p5;
 ID3D11Buffer* targetVertexConstBufferOutPut1;
 
-//ComPtr<ID3D11Buffer> targetVertexConstBuffer;
-//ComPtr<ID3D11Buffer> targetVertexConstBuffer1p5;
-//ComPtr<ID3D11Buffer> targetVertexConstBuffer1;
-//
-//ComPtr<ID3D11Buffer> targetVertexConstBufferOutPut;
-//ComPtr<ID3D11Buffer> targetVertexConstBufferOutPut1p5;
-//ComPtr<ID3D11Buffer> targetVertexConstBufferOutPut1;
-
-
-//RTVertex quadVertices[4] = {
-//	{ XMFLOAT3(-0.5f, -0.5f, 0.0f), XMFLOAT2(0.0f, 0.0f) },
-//	{ XMFLOAT3(-0.5f, 0.5f, 0.0f), XMFLOAT2(0.0f, 1.0f) },
-//	{ XMFLOAT3(0.5f, 0.5f, 0.0f), XMFLOAT2(1.0f, 1.0f) },
-//	{ XMFLOAT3(0.5f, -0.5f, 0.0f), XMFLOAT2(1.0f, 0.0f) }
-//};
 
 struct RTVertex
 {
@@ -167,15 +155,6 @@ public:
 
 
 XMFLOAT4X4 localTestingMat = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
-
-//RTVertex vertices[] = {
-//	{ XMFLOAT3(-0.5f, -0.5f, 1.0f), XMFLOAT2(0.0f, 1.0f) },  // 左下
-//	{ XMFLOAT3(0.5f, -0.5f, 1.0f) , XMFLOAT2(1.0f, 1.0f) },   // 左上
-//	{ XMFLOAT3(-0.5f, 0.5f, 1.0f) , XMFLOAT2(0.0f, 0.0f) },   // 右下
-//	{ XMFLOAT3(-0.5f, 0.5f, 1.0f) , XMFLOAT2(0.0f, 0.0f) },   // 右下
-//	{ XMFLOAT3(0.5f, -0.5f, 1.0f) , XMFLOAT2(1.0f, 1.0f) },   // 左上
-//	{ XMFLOAT3(0.5f, 0.5f, 1.0f)  , XMFLOAT2(1.0f, 0.0f) }     // 右上
-//};
 
 struct Vertex
 {
@@ -430,6 +409,47 @@ namespace Hook
 	
 		return CallWindowProc(oldFuncs.wndProc,hWnd, msg, wParam, lParam);
 	}
+
+
+	XMMATRIX GetProjectionMatrix(float fov)
+	{
+		XMMATRIX projectionMatrix = XMMatrixPerspectiveFovLH(
+			fov,                         // Field of view angle
+			windowWidth / windowHeight,  // Aspect ratio
+			NEAR_PLANE,                  // Near clipping plane distance
+			FAR_PLANE                    // Far clipping plane distance
+		);
+
+		return projectionMatrix;
+	}
+
+	RE::NiPoint3 D3D::WorldToScreen(RE::NiAVObject* cam, RE::NiAVObject* obj,float fov)
+	{
+		auto camRot = cam->world.rotate;
+		auto camTrans = cam->world.translate;
+
+		auto objRot = obj->world.rotate;
+		auto objTrans = obj->world.translate;
+
+
+		auto worldSpacePoint = camRot * (objTrans - camTrans);
+
+		XMMATRIX projectionMatrix = GetProjectionMatrix(fov);
+
+		XMVECTOR clipPosition = XMVectorSet(worldSpacePoint.x, worldSpacePoint.y, worldSpacePoint.z, 1.0f);
+		clipPosition = XMVector4Transform(clipPosition, projectionMatrix);  // Apply projection matrix
+
+		XMVECTOR ndcPosition = clipPosition / clipPosition.m128_f32[3];
+
+		XMVECTOR screenPosition;
+		screenPosition.m128_f32[0] = (ndcPosition.m128_f32[0] + 1.0f) / 2.0f * windowWidth;   // X coordinate in pixels
+		screenPosition.m128_f32[1] = (1.0f - ndcPosition.m128_f32[1]) / 2.0f * windowHeight;  // Y coordinate in pixels
+		screenPosition.m128_f32[2] = ndcPosition.m128_f32[2];                                 // Z coordinate is the depth value
+
+		RE::NiPoint3 outPoint({ screenPosition.m128_f32[0], screenPosition.m128_f32[1], screenPosition.m128_f32[2] });
+		return outPoint;
+	}
+
 	bool D3D::InitEffect()
 	{
 		ComPtr<ID3DBlob> blob;
@@ -682,7 +702,8 @@ namespace Hook
 	
 	
 	ComPtr<ID3D11ShaderResourceView> DrawIndexedSRV;
-
+	float copyFTSposX;
+	float copyFTSposY;
 	
 
 	bool bHasDraw = false;
@@ -718,6 +739,9 @@ namespace Hook
 		g_Context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
 		g_Context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
 
+		g_Context->VSSetConstantBuffers(1, 1, &targetVertexConstBufferOutPut);
+		g_Context->VSSetConstantBuffers(8, 1, &targetVertexConstBufferOutPut1p5);
+
 		mBackBuffer->GetDesc(&bbDesc);
 		bbDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 		bbDesc.CPUAccessFlags = 0;
@@ -750,6 +774,9 @@ namespace Hook
 		scopeData.eyeDirection = gameConstBuffer.virDir.GetXMFLOAT3();
 		scopeData.eyeDirectionLerp = { gameConstBuffer.VirDirLerp.x, gameConstBuffer.VirDirLerp.y, gameConstBuffer.VirDirLerp.z };
 		scopeData.eyeTranslationLerp = gameConstBuffer.VirTransLerp.GetXMFLOAT3();
+		scopeData.FTS_ScreenPos = { gameConstBuffer.ftsScreenPos.x, gameConstBuffer.ftsScreenPos.y };
+		copyFTSposX = gameConstBuffer.ftsScreenPos.x;
+		copyFTSposY = gameConstBuffer.ftsScreenPos.y;
 
 		if (bResetZoomDelta) {
 			gameZoomDelta = currData->shaderData.minZoom;
@@ -783,6 +810,7 @@ namespace Hook
 			scopeData.ScopeEffect_OriPositionOffset = { currData->shaderData.OriPositionOffset[0], currData->shaderData.OriPositionOffset[1] };
 			scopeData.ScopeEffect_OriSize = { currData->shaderData.OriSize[0], currData->shaderData.OriSize[1] };
 			scopeData.ScopeEffect_Size = { currData->shaderData.Size[0], currData->shaderData.Size[1] };
+
 
 			vsConstanData.CurrRootPos = gameConstBuffer.rootPos.GetXMFLOAT3();
 			vsConstanData.CurrWeaponPos = gameConstBuffer.weaponPos.GetXMFLOAT3();
@@ -835,10 +863,12 @@ namespace Hook
 		g_Context->OMSetBlendState(BSTransparent.Get(), nullptr, 0xFFFFFFFF);
 		g_Context->IASetInputLayout(gdc_pVertexLayout);
 		g_Context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
-		g_Context->VSSetConstantBuffers(1, 1, m_VSBuffer.GetAddressOf());
 
-		g_Context->PSSetConstantBuffers(0, 1, m_pScopeEffectBuffer.GetAddressOf());
-		g_Context->PSSetConstantBuffers(2, 1, m_pConstantBufferData.GetAddressOf());
+		
+		//g_Context->VSSetConstantBuffers(1, 1, m_VSBuffer.GetAddressOf());
+
+		g_Context->PSSetConstantBuffers(4, 1, m_pConstantBufferData.GetAddressOf());
+		g_Context->PSSetConstantBuffers(5, 1, m_pScopeEffectBuffer.GetAddressOf());
 
 		g_Context->PSSetShaderResources(4, 1, instance().mShaderResourceView.GetAddressOf());
 		g_Context->PSSetShaderResources(5, 1, instance().mTextDDS_SRV.GetAddressOf());
@@ -869,8 +899,12 @@ namespace Hook
 
 			UINT srcWidth = windowWidth;
 			UINT srcHeight = windowHeight;
-			float outPutWidth = 4096;
-			float outPutHeight = 4096;
+			/*UINT srcWidth = copyFTSposX;
+			UINT srcHeight = copyFTSposY;*/
+			float outPutWidth = windowWidth;
+			float outPutHeight = windowHeight;
+			/*float outPutWidth = 4096;
+			float outPutHeight = 4096;*/
 			DXGI_FORMAT srcFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
 
 			ID3D11Texture2D* pDstTexture = nullptr;
@@ -921,6 +955,8 @@ namespace Hook
 			D3D11_BOX srcBox = {};
 			UINT srcCenterX = srcWidth / 2;
 			UINT srcCenterY = srcHeight / 2;
+			/*UINT srcCenterX = srcWidth;
+			UINT srcCenterY = srcHeight;*/
 
 			srcBox.left = srcCenterX - copyWidth / 2;     
 			srcBox.right = srcCenterX + copyWidth / 2;    
@@ -941,13 +977,15 @@ namespace Hook
 			dstX = max(dstX, 0);
 			dstY = max(dstY, 0);
 
-			g_Context->CopySubresourceRegion(pDstTexture, dstSubresource, dstX, dstY, dstZ, mRTRenderTargetTexture.Get(), srcSubresource, &srcBox);
+			//g_Context->CopySubresourceRegion(pDstTexture, dstSubresource, dstX, dstY, dstZ, mRTRenderTargetTexture.Get(), srcSubresource, &srcBox);
 
 			//g_Context->GenerateMips(pDstView);
-
+			g_Context->CopyResource(pDstTexture, mRTRenderTargetTexture.Get());
 
 			g_Context->VSSetShader(targetVS.Get(), targetVSClassInstance.GetAddressOf(), targetVSNumClassesInstance);
 			g_Context->PSSetShader(m_outPutPixelShader.Get(), nullptr, 0);
+			g_Context->PSSetConstantBuffers(4, 1, m_pConstantBufferData.GetAddressOf());
+			g_Context->PSSetConstantBuffers(5, 1, m_pScopeEffectBuffer.GetAddressOf());
 
 			D3D11_DEPTH_STENCIL_DESC tempDSD;
 			D3D11_DEPTH_STENCILOP_DESC tempDSOPD;
@@ -976,13 +1014,6 @@ namespace Hook
 			g_Context->VSSetConstantBuffers(1, 1, &targetVertexConstBufferOutPut);
 			g_Context->VSSetConstantBuffers(2, 1, &targetVertexConstBufferOutPut1p5);
 
-
-			//g_Context->VSSetConstantBuffers(12, 1, targetVertexConstBufferOutPut1.GetAddressOf());
-			
-			/*g_Context->VSSetConstantBuffers(1, 1, targetVertexConstBuffer.GetAddressOf());
-			g_Context->VSSetConstantBuffers(2, 1, targetVertexConstBuffer1p5.GetAddressOf());
-			g_Context->VSSetConstantBuffers(12, 1, targetVertexConstBuffer1.GetAddressOf());*/
-
 			g_Context->IASetIndexBuffer(targetIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, targetIndexBufferOffset);
 			g_Context->IASetVertexBuffers(0, 1, targetVertexBuffer.GetAddressOf(), &targetVertexBufferStrides, &targetVertexBufferOffsets);
 
@@ -990,7 +1021,7 @@ namespace Hook
 			/*g_Context->PSSetShaderResources(0, 1, mShaderResourceView.GetAddressOf());
 			g_Context->PSSetShaderResources(5, 1, mShaderResourceView.GetAddressOf());*/
 			g_Context->PSSetShaderResources(0, 1, &pDstView);
-			g_Context->PSSetShaderResources(5, 1, &pDstView);
+			g_Context->PSSetShaderResources(6, 1, &pDstView);
 
 			bSelfDraw = true;
 			g_Context->DrawIndexed(IndexCount, StartIndexLocation, BaseVertexLocation);
@@ -1053,6 +1084,9 @@ namespace Hook
 
 				pContext->PSGetShaderResources(0, 1, DrawIndexedSRV.GetAddressOf());
 
+				if (!DrawIndexedSRV.Get())
+						return oldFuncs.drawIndexed(pContext, IndexCount, StartIndexLocation, BaseVertexLocation);
+			
 				ID3D11Resource* pResource;
 				DrawIndexedSRV->GetResource(&pResource);
 				D3D11_SHADER_RESOURCE_VIEW_DESC tempSRVDesc;
@@ -1084,6 +1118,8 @@ namespace Hook
 
 								}
 
+								
+								
 								targetIndexCount = IndexCount;
 								targetStartIndexLocation = StartIndexLocation;
 								targetBaseVertexLocation = BaseVertexLocation;

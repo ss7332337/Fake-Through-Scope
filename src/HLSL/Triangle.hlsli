@@ -11,11 +11,12 @@ struct VertexPosHTex
 };
 
 
-cbuffer ResolutionConstantData : register(b2){
+cbuffer ResolutionConstantData : register(b4){
 	float BUFFER_WIDTH;
 	float BUFFER_HEIGHT;
 };
-cbuffer ScopeEffectData : register(b0)
+
+cbuffer ScopeEffectData : register(b5)
 {
 	
 	float camDepth;
@@ -43,7 +44,6 @@ cbuffer ScopeEffectData : register(b0)
 
 	float2 ScopeEffect_OriSize;
 	float2 ScopeEffect_Offset;
-
 	float3 eyeDirection;
 	float padding1 = 0;
 
@@ -60,11 +60,21 @@ cbuffer ScopeEffectData : register(b0)
 	float padding5 = 0;
 
 	row_major float4x4 CameraRotation; 
+
+	float2 FTS_ScreenPos;
+	float2 sd_padding6;
+
+	float4x4 projMat;
 	
 };
 
- cbuffer eyeDirectionData: register(b1)
- {
+cbuffer CopyFormGame : register(b8)
+{
+	float4x4 copyMat;
+}
+
+cbuffer eyeDirectionData: register(b6)
+{
  	float3 eyeDirection1;
  	float MovePercentage1;
  	float3 eyeDirectionLerp1;
@@ -74,10 +84,10 @@ cbuffer ScopeEffectData : register(b0)
  	float3 CurrRootPos1;
  	float padding15 = 0;
  	row_major float4x4 CameraRotation1;
- };
+};
 
 
-cbuffer ftsPoint: register(b3)
+cbuffer ftsPoint: register(b7)
  {
 	row_major float4x4 testingMat;
 	row_major float4x4 FtsLocalRotation;
@@ -104,3 +114,5 @@ float2 aspect_ratio_correction(float2 tc)
 	tc.x += 0.5f;
 	return tc;
 }
+
+

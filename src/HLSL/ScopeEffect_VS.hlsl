@@ -7,6 +7,8 @@
 // 	position = float4(texcoord * float2(2.0, -2.0) + float2(-1.0, 1.0), 0.0, 1.0);
 // }
 
+
+
 void main(in VertexPosTex input, out float4 position : SV_Position, out float2 texcoord : TEXCOORD)
 {
     // texcoord.x = (id == 2) ? 2.0 : 0.0;
@@ -19,8 +21,7 @@ void main(in VertexPosTex input, out float4 position : SV_Position, out float2 t
 	// //pow(CurrWeaponPos.z - CurrRootPos.z, 2)
 	// );
 
-	// float zMove = abs(saturate((sqrt((BaseWeaponPos)) - distanceWeap))) * MovePercentage;
-	
 	texcoord = input.tex;
 	position = float4(texcoord * float2(2.0, -2.0) + float2(-1.0, 1.0), 0.0, 1.0);
+	//position = mul(float4(texcoord, 0.0, 1.0),copyMat);
 }

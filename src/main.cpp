@@ -458,6 +458,13 @@ void HookedUpdate()
 		
 		//_MESSAGE("Menu: %s", UI::GetSingleton()->menuStack[0]->menuName.c_str());
 
+		NiPoint3 tempOut;
+		if (scopeNode && camNode) 
+		{
+			tempOut = hookIns->WorldToScreen(camNode, scopeNode, PlayerCamera::GetSingleton()->firstPersonFOV);
+			_MESSAGE("tempOut: %f, %f, %f", tempOut.x, tempOut.y, tempOut.z);
+		}
+
 		
 
 		NiPointer<bhkCharacterController> con = player->currentProcess->middleHigh->charController;
@@ -471,7 +478,7 @@ void HookedUpdate()
 			NiPoint4 VirTransLerp = { currPosition.pt[0] - lastPosition.pt[0], 
 				currPosition.pt[1] - lastPosition.pt[1],
 				currPosition.pt[2] - lastPosition.pt[2],
-				currPosition.pt[3] - lastPosition.pt[3] };
+				currPosition.pt[3] - lastPosition.pt[3]                                                           };
 			lastPosition = currPosition;
 
 			NiPoint3 virDir = scopeNode->world.translate - camNode->world.translate;
@@ -494,6 +501,7 @@ void HookedUpdate()
 			gcb.camMat = camNode->world.rotate;
 			gcb.ftsLocalMat = scopeNode->local.rotate;
 			gcb.ftsWorldMat = scopeNode->world.rotate;
+			gcb.ftsScreenPos = tempOut;
 
 			if (bHasStartedScope) {
 				scopeTimer += *ptr_deltaTime *1000;

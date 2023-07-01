@@ -3,8 +3,6 @@
 #include <io.h>
 #include <fstream>
 #include <iostream>
-#include "reshade.hpp"
-
 
 using namespace std;
 
@@ -311,7 +309,7 @@ namespace ScopeData
 		
 	}
 
-	void ScopeDataHandler::SetNVGHotKeyMain(UINT mainkeycode)
+	void ScopeDataHandler::SetNVGHotKeyMain(unsigned int mainkeycode)
 	{
 
 		nvKey = mainkeycode;
@@ -328,7 +326,7 @@ namespace ScopeData
 		o.close();
 	}
 
-	void ScopeDataHandler::SetGuiKey(UINT mainkeycode)
+	void ScopeDataHandler::SetGuiKey(unsigned int mainkeycode)
 	{
 		guiKey = mainkeycode;
 
