@@ -293,7 +293,7 @@ public:
 	//using Virtual-Key Codes
 	void ProcessButtonEvent(ButtonEvent* evn)
 	{
-		{
+
 			if (evn->eventType != INPUT_EVENT_TYPE::kButton) {
 				if (evn->next)
 					ProcessButtonEvent((ButtonEvent*)evn->next);
@@ -337,7 +337,6 @@ public:
 					}
 				}
 			}
-		}
 	
 		
 	
@@ -768,6 +767,7 @@ void ResetScopeStatus()
 	}
 
 	InGameFlag = true;
+	hookIns->SetIsInGame(InGameFlag);
 }
 
 

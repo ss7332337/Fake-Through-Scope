@@ -63,8 +63,8 @@ cbuffer ScopeEffectData : register(b5)
 
 	float2 FTS_ScreenPos;
 	float2 sd_padding6;
-
-	float4x4 projMat;
+	
+	row_major float4x4 projMat;
 	
 };
 
@@ -115,4 +115,44 @@ float2 aspect_ratio_correction(float2 tc)
 	return tc;
 }
 
+float3 ViewToScreen(float4 obj)
+{
+	float4 clipPos = mul(obj,projMat);
+	float4 ndcPosition = clipPos / obj.w;
+	float3 screenPos; 	
 
+	screenPos.x = (ndcPosition.x + 1.0f) / 2.0f * BUFFER_WIDTH;
+	screenPos.y = (1.0f - ndcPosition.y) / 2.0f * BUFFER_HEIGHT;
+	screenPos.z = ndcPosition.z;
+	                 
+	return screenPos;
+}
+
+float2 clampMagnitude(float2 v, float l)
+{
+	return normalize(v) * min(length(v), l);
+}
+
+/// <summary>
+/// From CrookR and I modified a bit
+/// </summary>
+float getparallax(float d, float2 ds, float dfov)
+{
+	return clamp(1 - pow(abs(rcp(parallax_Radius * ds.y) * (parallax_relativeFogRadius * d * ds.y)), parallax_scopeSwayAmount), 0, parallax_maxTravel);
+}
+
+float4 NVGEffect(float4 color, float2 texcoord)
+{
+	float lum = dot(color.rgb, float3(0.30f, 0.59f, 0.11f));
+	float3 nvColor = float3(0, lum * (-log(lum) + 1), 0);
+
+	float LinesOn = 2;
+	float LinesOff = 2;
+	float OffIntensity = 0.5f;
+
+	float intensity = texcoord.y * BUFFER_HEIGHT % (LinesOn + LinesOff);
+	bool larger = intensity < LinesOn;
+	intensity = 1.0f - larger * OffIntensity;
+
+	return float4(saturate(nvColor.xyz * intensity * nvIntensity), 1);
+}

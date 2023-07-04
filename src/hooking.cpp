@@ -388,7 +388,7 @@ namespace Hook
 						auto input = (RE::BSInputDeviceManager::GetSingleton());
 						if (input) {
 							input->valueQueued = !isShow;
-							input->pollingEnabled = !isShow;					
+							input->pollingEnabled = !isShow;
 						}
 					}
 				}
@@ -468,10 +468,23 @@ namespace Hook
 		HR(CreateShaderFromFile(L"Data\\Shaders\\XiFeiLi\\ScopeEffect_VS_Output.cso", L"HLSL\\ScopeEffect_VS_Output.hlsl", "main", "vs_5_0", blob.ReleaseAndGetAddressOf()));
 		HR(g_Device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, m_outPutVertexShader.GetAddressOf()));
 
-		
-
 		return true;
 	}
+
+	void D3D::InitLegacyEffect()
+	{
+		ComPtr<ID3DBlob> blob;
+
+		HR(CreateShaderFromFile(L"Data\\Shaders\\XiFeiLi\\ScopeEffect_PS_Legacy.cso", L"HLSL\\ScopeEffect_PS_Legacy.hlsl", "main", "ps_5_0", blob.ReleaseAndGetAddressOf()));
+		HR(g_Device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, m_pPixelShader_Legacy.GetAddressOf()));
+
+		HR(CreateShaderFromFile(L"Data\\Shaders\\XiFeiLi\\ScopeEffect_PS_Output_Legacy.cso", L"HLSL\\ScopeEffect_PS_Output_Legacy.hlsl", "main", "ps_5_0", blob.ReleaseAndGetAddressOf()));
+		HR(g_Device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, m_outPutPixelShader_Legacy.GetAddressOf()));
+
+		HR(CreateShaderFromFile(L"Data\\Shaders\\XiFeiLi\\ScopeEffect_VS_Legacy.cso", L"HLSL\\ScopeEffect_VS_Legacy.hlsl", "main", "vs_5_0", blob.ReleaseAndGetAddressOf()));
+		HR(g_Device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, m_pVertexShader_Legacy.GetAddressOf()));
+	}
+
 	void D3D::CreateBlender()
 	{
 		D3D11_BLEND_DESC blendDesc;
@@ -811,7 +824,6 @@ namespace Hook
 			scopeData.ScopeEffect_OriSize = { currData->shaderData.OriSize[0], currData->shaderData.OriSize[1] };
 			scopeData.ScopeEffect_Size = { currData->shaderData.Size[0], currData->shaderData.Size[1] };
 
-
 			vsConstanData.CurrRootPos = gameConstBuffer.rootPos.GetXMFLOAT3();
 			vsConstanData.CurrWeaponPos = gameConstBuffer.weaponPos.GetXMFLOAT3();
 			vsConstanData.eyeDirection = gameConstBuffer.virDir.GetXMFLOAT3();
@@ -1014,6 +1026,7 @@ namespace Hook
 			g_Context->VSSetConstantBuffers(1, 1, &targetVertexConstBufferOutPut);
 			g_Context->VSSetConstantBuffers(2, 1, &targetVertexConstBufferOutPut1p5);
 
+
 			g_Context->IASetIndexBuffer(targetIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, targetIndexBufferOffset);
 			g_Context->IASetVertexBuffers(0, 1, targetVertexBuffer.GetAddressOf(), &targetVertexBufferStrides, &targetVertexBufferOffsets);
 
@@ -1169,6 +1182,7 @@ namespace Hook
 
 					OnResize();
 					InitEffect();
+					InitLegacyEffect();
 					InitResource();
 
 					
@@ -1221,7 +1235,7 @@ namespace Hook
 
 	void D3D::RenderImGui()
 	{
-		if (isShow && isEnableRender) {
+		if (isShow && bIsInGame) {
 			ImGui_ImplDX11_NewFrame();
 			ImGui_ImplWin32_NewFrame();
 			ImGui::NewFrame();
@@ -1659,32 +1673,30 @@ namespace Hook
 		HR(g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain)));
 		DXGI_SWAP_CHAIN_DESC sd;
 		mSwapChain->GetDesc(&sd);*/
-
-		
-		
 		
 		RECT rect;
-		auto window = GetActiveWindow();
+		auto window = (HWND)RE::BSGraphics::RendererData::GetSingleton()->renderWindow->hwnd;
 		DXGI_SWAP_CHAIN_DESC sd;
-		g_Swapchain->GetDesc(&sd);
+		RE::BSGraphics::RendererData::GetSingleton()->renderWindow->swapChain->GetDesc(&sd);
 
-		oldFuncs.wndProc = (WNDPROC)GetWindowLongPtr(window, GWLP_WNDPROC);
-		SetWindowLongPtr(sd.OutputWindow, GWLP_WNDPROC, (LONG_PTR)WndProcHandler);
-		::GetWindowRect(sd.OutputWindow, &oldRect);
+		oldFuncs.wndProc = (WNDPROC)SetWindowLongPtr(window, GWLP_WNDPROC, (LONG_PTR)WndProcHandler);
+		::GetWindowRect(window, &oldRect);
 
-		if (GetWindowRect(sd.OutputWindow, &rect)) {
+		if (GetWindowRect(window, &rect)) {
 			windowWidth = rect.right - rect.left;
 			windowHeight = rect.bottom - rect.top;
 		}
 
+		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO();
-		(void)io;
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+		io.BackendFlags = ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_RendererHasVtxOffset;
 
 		ImGui::StyleColorsDark();
 
-		IMGUI_CHECKVERSION();
-		ImGui_ImplWin32_Init(sd.OutputWindow);
+		
+		ImGui_ImplWin32_Init(window);
 		ImGui_ImplDX11_Init((g_Device.Get()), (g_Context.Get()));
 
 
@@ -1714,4 +1726,5 @@ namespace Hook
 	bool D3D::bQueryRender = false;
 	bool D3D::isShow = false;
 	bool D3D::bIsUpscaler = false;
+	bool D3D::bIsInGame = false;
 }

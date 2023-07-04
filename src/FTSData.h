@@ -54,6 +54,7 @@ namespace ScopeData
 	class FTSData
 	{
 	public:
+		bool legacyMode = true;
 		std::string path;
 		int version;
 		std::string keywordName;

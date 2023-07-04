@@ -323,9 +323,9 @@ namespace Hook
 
 			XMFLOAT2 FTS_ScreenPos = { 0, 0 };
 			XMFLOAT2 padding6 = { 0, 0 };
-
 			XMFLOAT4X4 projMat;	
 		};
+
 
 		struct GameConstBuffer
 		{
@@ -345,6 +345,7 @@ namespace Hook
 		void EnableRender(bool flag) { isEnableRender = flag; }
 		void Render();
 		bool InitEffect();
+		void InitLegacyEffect();
 		bool InitResource();
 		void InitInputLayout();
 		void OnResize();
@@ -436,6 +437,7 @@ namespace Hook
 		void QueryRender(bool flag) { bQueryRender = flag; }
 		bool GetRenderState() { return bQueryRender ; }
 		void SetIsUpscaler(bool flag) { bIsUpscaler = flag; }
+		void SetIsInGame(bool flag) { bIsInGame = flag; }
 
 		
 	private:
@@ -451,6 +453,7 @@ namespace Hook
 		static bool bCanEnableNVGEffect;
 		static bool bQueryRender;
 		static bool bIsUpscaler;
+		static bool bIsInGame;
 
 	private:
 		ComPtr<ID3D11InputLayout> m_pVertexLayout;
@@ -467,6 +470,11 @@ namespace Hook
 		ComPtr<ID3D11PixelShader> m_pPixelShader;
 		ComPtr<ID3D11PixelShader> m_outPutPixelShader;
 		ComPtr<ID3D11VertexShader> m_outPutVertexShader;
+
+		ComPtr<ID3D11PixelShader> m_pPixelShader_Legacy;
+		ComPtr<ID3D11PixelShader> m_outPutPixelShader_Legacy;
+		ComPtr<ID3D11VertexShader> m_pVertexShader_Legacy;
+
 		ComPtr<ID3D11Texture2D> m_pDepthStencilBuffer; 
 		ComPtr<ID3D11RenderTargetView> m_pRenderTargetView;
 		ComPtr<ID3D11DepthStencilView> m_pDepthStencilView;

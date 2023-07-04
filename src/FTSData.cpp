@@ -36,6 +36,7 @@ namespace ScopeData
 			json j = json::parse(f);
 
 			//j["keywordEditorID"] = currentData->keywordData.keywordName;
+			j["LegacyMode"] = currentData->legacyMode;
 			j["UsingSTS"] = currentData->UsingSTS;
 
 			j["scopeFrame"] = currentData->scopeFrame;
@@ -406,6 +407,7 @@ namespace ScopeData
 	{
 		std::ifstream f(path);
 		json j = json::parse(f);
+		legacyMode = j["LegacyMode"].is_null() ? true : (bool)j["LegacyMode"];
 		version = j["Version"].is_null() ? (int)currentFTSDataVerion : (int)j["Version"];
 		UsingSTS = j["UsingSTS"].is_null() ? false : (bool)j["UsingSTS"];
 		ZoomNodePath = j["ReticleTexturePath"].is_null() ? "Data/Textures/FTS/Default.dds" : j["ReticleTexturePath"];
