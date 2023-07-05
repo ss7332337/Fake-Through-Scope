@@ -349,7 +349,7 @@ namespace Hook
 		bool InitResource();
 		void InitInputLayout();
 		void OnResize();
-		void UpdateScene();
+		void UpdateScene(ScopeData::FTSData*);
 		void ShowMenu(bool);
 		void EnableCursor(bool enable);
 		void RenderImGui();

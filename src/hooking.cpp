@@ -13,11 +13,8 @@
 #include <backends/imgui_impl_win32.h>
 #include <misc/cpp/imgui_stdlib.h>
 
-//#include <dinput.h>
-
 #pragma comment(lib, "D3DCompiler.lib")
 #pragma comment(lib, "dwrite.lib")
-//#pragma comment(lib, "dinput8.lib")
 #pragma comment(lib, "dxguid.lib")
 
 
@@ -180,8 +177,6 @@ D3D11_INPUT_ELEMENT_DESC gdc_layout[] = {
 	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },  // 位置元素描述
 	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },    // 颜色元素描述
 };
-
-
 
 D3D11_INPUT_ELEMENT_DESC inputElements[] = {
 	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(RTVertex, position), D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -712,8 +707,7 @@ namespace Hook
 	UINT targetVertexBufferStrides;
 	UINT targetVertexBufferOffsets;
 
-	
-	
+
 	ComPtr<ID3D11ShaderResourceView> DrawIndexedSRV;
 	float copyFTSposX;
 	float copyFTSposY;
@@ -740,29 +734,23 @@ namespace Hook
 		}
 	}
 
-	void D3D::UpdateScene()
+	void D3D::UpdateScene(FTSData* currData)
 	{
-		auto currData = sdh->GetCurrentFTSData();
 
-		if (!currData)
-			return;
+		if (bChangeAimTexture) {
+			if (instance().mTextDDS_SRV)
+					instance().mTextDDS_SRV.ReleaseAndGetAddressOf();
 
-		g_Context->OMSetRenderTargets(1, mRTRenderTargetView.GetAddressOf(), tempSV);
+			//g_Context->PSSetShaderResources(5, 1, nullptr);
+			const wchar_t* tempPath;
+			auto tempWchar = GetWC(currData->ZoomNodePath.c_str());
+			tempPath = currData->ZoomNodePath.empty() ? L"Data/Textures/FTS/Empty.dds" : tempWchar;
+			HR(CreateDDSTextureFromFile(g_Device.Get(), tempPath, nullptr, instance().mTextDDS_SRV.GetAddressOf()));
 
-		g_Context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
-		g_Context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
-
-		g_Context->VSSetConstantBuffers(1, 1, &targetVertexConstBufferOutPut);
-		g_Context->VSSetConstantBuffers(8, 1, &targetVertexConstBufferOutPut1p5);
-
-		mBackBuffer->GetDesc(&bbDesc);
-		bbDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-		bbDesc.CPUAccessFlags = 0;
-		bbDesc.Usage = D3D11_USAGE_DEFAULT;
-		bbDesc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
-
-		//HR(g_Device->CreateTexture2D(&bbDesc, nullptr, &mDynamicTexture));
-		g_Context->CopyResource(mBackBufferCopy, mBackBuffer);
+			if (tempWchar)
+					free((void*)tempWchar);
+			bChangeAimTexture = false;
+		}
 
 #pragma region FO4GameConstantBuffer
 
@@ -833,6 +821,29 @@ namespace Hook
 		}
 #pragma endregion
 
+		
+	}
+
+	void D3D::GrabScreen()
+	{
+
+		g_Context->OMSetRenderTargets(1, mRTRenderTargetView.GetAddressOf(), tempSV);
+
+		g_Context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
+		g_Context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
+
+		g_Context->VSSetConstantBuffers(1, 1, &targetVertexConstBufferOutPut);
+		g_Context->VSSetConstantBuffers(8, 1, &targetVertexConstBufferOutPut1p5);
+
+		mBackBuffer->GetDesc(&bbDesc);
+		bbDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		bbDesc.CPUAccessFlags = 0;
+		bbDesc.Usage = D3D11_USAGE_DEFAULT;
+		bbDesc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
+
+		//HR(g_Device->CreateTexture2D(&bbDesc, nullptr, &mDynamicTexture));
+		g_Context->CopyResource(mBackBufferCopy, mBackBuffer);
+
 		D3D11_MAPPED_SUBRESOURCE mappedDataA;
 		HR(g_Context->Map(instance().m_pScopeEffectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataA));
 		memcpy_s(mappedDataA.pData, sizeof(ScopeEffectShaderData), &instance().scopeData, sizeof(ScopeEffectShaderData));
@@ -851,21 +862,6 @@ namespace Hook
 		memcpy_s(mappedData.pData, sizeof(VSConstantData), &instance().constBufferData, sizeof(VSConstantData));
 		g_Context->Unmap(instance().m_pConstantBufferData.Get(), 0);
 
-		if (bChangeAimTexture) {
-			if (instance().mTextDDS_SRV)
-					instance().mTextDDS_SRV.ReleaseAndGetAddressOf();
-
-			//g_Context->PSSetShaderResources(5, 1, nullptr);
-			const wchar_t* tempPath;
-			auto tempWchar = GetWC(currData->ZoomNodePath.c_str());
-			tempPath = currData->ZoomNodePath.empty() ? L"Data/Textures/FTS/Empty.dds" : tempWchar;
-			HR(CreateDDSTextureFromFile(g_Device.Get(), tempPath, nullptr, instance().mTextDDS_SRV.GetAddressOf()));
-
-			if (tempWchar)
-					free((void*)tempWchar);
-			bChangeAimTexture = false;
-		}
-
 		UINT stride = sizeof(Vertex);
 		UINT offset = 0;
 
@@ -876,7 +872,6 @@ namespace Hook
 		g_Context->IASetInputLayout(gdc_pVertexLayout);
 		g_Context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
 
-		
 		//g_Context->VSSetConstantBuffers(1, 1, m_VSBuffer.GetAddressOf());
 
 		g_Context->PSSetConstantBuffers(4, 1, m_pConstantBufferData.GetAddressOf());
@@ -1184,13 +1179,18 @@ namespace Hook
 					InitEffect();
 					InitLegacyEffect();
 					InitResource();
-
-					
 					bIsFirst = false;
 				}
+
+				auto currData = sdh->GetCurrentFTSData();
+
+				if (!currData)
+					return;
+
 				g_Context->OMGetRenderTargets(1, &tempRt, &tempSV);
 
-				UpdateScene();
+				UpdateScene(currData);
+				instance().GrabScreen();
 				instance().RenderToReticleTextureNew(targetIndexCount, targetStartIndexLocation, targetBaseVertexLocation);
 				g_Context->OMSetRenderTargets(1, &tempRt, tempSV);
 
@@ -1507,23 +1507,6 @@ namespace Hook
 		return *reinterpret_cast<void***>(obj);
 	}
 
-	HRESULT __stdcall Hook::D3D::CreateBufferHook(ID3D11Device* pDevice, D3D11_BUFFER_DESC const* pDesc, D3D11_SUBRESOURCE_DATA const* pSubresource, ID3D11Buffer** pBuffer)
-	{
-		//_MESSAGE("CreateBufferHook");
-		/*if (pDesc->ByteWidth == 384 && (pDesc->BindFlags & D3D11_BIND_CONSTANT_BUFFER) && pDesc->CPUAccessFlags == D3D11_CPU_ACCESS_WRITE && pDesc->Usage == D3D11_USAGE_DYNAMIC)
-		{
-			D3D11_BUFFER_DESC newDesc = *pDesc;
-			newDesc.ByteWidth = 384;
-			newDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-			newDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE;
-			newDesc.Usage = pDesc->Usage;
-			newDesc.MiscFlags = pDesc->MiscFlags;
-			newDesc.StructureByteStride = pDesc->StructureByteStride;
-			_MESSAGE("FOUND!!!!");
-		}*/
-		return oldFuncs.createBuffer(pDevice, pDesc, pSubresource, pBuffer);
-	}
-
 	HRESULT __stdcall D3D::PresentHook(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
 	{
 		void** swapChainVTable = get_vtable_ptr(g_Device.Get());
@@ -1660,7 +1643,7 @@ namespace Hook
 
 		std::uintptr_t* vtbl2 = (std::uintptr_t*)(*ppDevice);
 		vtbl2 = (std::uintptr_t*)vtbl2[0];
-		HookFunc(vtbl2, 3, (std::uintptr_t)CreateBufferHook, (std::uintptr_t*)&oldFuncs.createBuffer);
+		//HookFunc(vtbl2, 3, (std::uintptr_t)CreateBufferHook, (std::uintptr_t*)&oldFuncs.createBuffer);
 
 		std::uintptr_t* vtbl = (std::uintptr_t*)(g_Context.Get());
 		vtbl = (std::uintptr_t*)vtbl[0];

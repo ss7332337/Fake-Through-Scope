@@ -38,7 +38,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE 
 
 project(
 	FakeThroughScope
-	VERSION 0.7.1
+	VERSION 0.9.0
 	LANGUAGES CXX
 )
 
@@ -114,14 +114,36 @@ source_group(
 )
 
 # ---- Create DLL ----
+file(GLOB HLSL_FILES src/HLSL/*.hlsl)
 
 add_library(
 	${PROJECT_NAME}
 	SHARED
+	${HLSL_FILES}
 	${SOURCES}
 	${CMAKE_CURRENT_BINARY_DIR}/version.rc
 	.clang-format
 )
+
+
+#foreach(HLSL_FILE ${HLSL_FILES})
+# set_source_files_properties(${HLSL_FILE} PROPERTIES VS_SHADER_OBJECT_FILE_NAME "G:\\0p\\Steam\\steamapps\\common\\Fallout 4\\Data\\Shaders\\XiFeiLi\\%(Filename).cso" VS_SHADER_MODEL 5.0 VS_SHADER_ENTRYPOINT main)
+#endforeach()
+
+macro(set_hlsl_properties HLSL_FILE SHADER_TYPE)
+  set_source_files_properties(${HLSL_FILE} PROPERTIES VS_SHADER_OBJECT_FILE_NAME "G:\\0p\\Steam\\steamapps\\common\\Fallout 4\\Data\\Shaders\\XiFeiLi\\%(Filename).cso" VS_SHADER_TYPE ${SHADER_TYPE} VS_SHADER_MODEL 5.0 VS_SHADER_ENTRYPOINT main)
+endmacro()
+
+
+set_hlsl_properties(src/HLSL/ScopeEffect_VS.hlsl Vertex)
+set_hlsl_properties(src/HLSL/ScopeEffect_VS_Output.hlsl Vertex)
+set_hlsl_properties(src/HLSL/ScopeEffect_VS_Legacy.hlsl Vertex)
+
+set_hlsl_properties(src/HLSL/ScopeEffect_PS.hlsl Pixel)
+set_hlsl_properties(src/HLSL/ScopeEffect_PS_Output.hlsl Pixel)
+set_hlsl_properties(src/HLSL/ScopeEffect_PS_Legacy.hlsl Pixel)
+set_hlsl_properties(src/HLSL/ScopeEffect_PS_Output_Legacy.hlsl Pixel)
+
 
 target_compile_definitions(
 	${PROJECT_NAME}
@@ -141,6 +163,8 @@ target_include_directories(
 		#E:/CInclude
 		${CMAKE_CURRENT_BINARY_DIR}/include
 		${CMAKE_CURRENT_SOURCE_DIR}/src
+		${CMAKE_CURRENT_SOURCE_DIR}/../imgui-1.86
+
 )
 
 target_link_libraries(

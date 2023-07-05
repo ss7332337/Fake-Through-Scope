@@ -1,5 +1,4 @@
 #include "Triangle.hlsli"
-#include "ScopeEffect_PS.h"
 
 sampler BackBuffer;
 
