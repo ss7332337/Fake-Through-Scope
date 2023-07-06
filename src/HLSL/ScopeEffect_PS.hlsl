@@ -28,6 +28,10 @@ float4 main(float4 vpos : SV_Position, float2 texcoord : TEXCOORD0) : SV_Target
 	// float2 ReticleCoord;
 
 	float4 abseyeDirectionLerp = mul(float4(eyeDirectionLerp,1),CameraRotation);
+	if (abseyeDirectionLerp.y < 0 && abseyeDirectionLerp.y >= -0.001)
+		abseyeDirectionLerp.y = -0.001;
+	else if (abseyeDirectionLerp.y >= 0 && abseyeDirectionLerp.y <= 0.001)
+		abseyeDirectionLerp.y = 0.001;
 
     float2 eye_velocity = clampMagnitude(abseyeDirectionLerp.xy , 2);
 

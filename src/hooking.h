@@ -456,6 +456,9 @@ namespace Hook
 		static bool bIsInGame;
 
 	private:
+		ID3D11Texture2D* m_DstTexture = nullptr;
+		ID3D11ShaderResourceView* m_DstView = nullptr;
+
 		ComPtr<ID3D11InputLayout> m_pVertexLayout;
 		ComPtr<ID3D11Buffer> m_pVertexBuffer;
 		ComPtr<ID3D11Buffer> m_pIndexBuffer;

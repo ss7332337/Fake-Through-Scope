@@ -21,6 +21,7 @@
 inline void InitCurrentScopeData(RE::BGSKeyword* animFlavorKeyword);
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+bool bLegacyMode;
 bool UsingSTS_UI;
 int scopeFrame_UI;
 bool IsCircle_UI;
@@ -480,6 +481,8 @@ namespace Hook
 		HR(g_Device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, m_pVertexShader_Legacy.GetAddressOf()));
 	}
 
+	ID3D11BlendState* mTransparentBS = nullptr;
+
 	void D3D::CreateBlender()
 	{
 		D3D11_BLEND_DESC blendDesc;
@@ -500,6 +503,18 @@ namespace Hook
 		rtDesc.BlendOpAlpha = D3D11_BLEND_OP_ADD;
 
 		HR(g_Device->CreateBlendState(&blendDesc, BSTransparent.GetAddressOf()));
+
+		ZeroMemory(&blendDesc, sizeof(blendDesc));
+		blendDesc.RenderTarget[0].BlendEnable = true;
+		blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+		blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+		blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+		blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+		blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+		blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+		blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+		
+		HR(g_Device->CreateBlendState(&blendDesc, &mTransparentBS));
 	}
 
 	bool D3D::InitResource()
@@ -631,7 +646,7 @@ namespace Hook
 		textureDesc.Height = windowHeight;
 		textureDesc.MipLevels = 1;
 		textureDesc.ArraySize = 1;
-		textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT; 
+		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; 
 		textureDesc.SampleDesc.Count = 1;
 		textureDesc.Usage = D3D11_USAGE_DEFAULT;
 		textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
@@ -662,7 +677,7 @@ namespace Hook
 		textureDesc.Height = 1024;
 		textureDesc.MipLevels = 1;
 		textureDesc.ArraySize = 1;
-		textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		textureDesc.SampleDesc.Count = 1;
 		textureDesc.Usage = D3D11_USAGE_DEFAULT;
 		textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
@@ -673,6 +688,37 @@ namespace Hook
 		
 		HR(g_Device->CreateRenderTargetView(mOutPutRTRenderTargetTexture.Get(), &renderTargetViewDesc, mOutPutRTRenderTargetView.GetAddressOf()));
 		HR(g_Device->CreateShaderResourceView(mOutPutRTRenderTargetTexture.Get(), &shaderResourceViewDesc, mOutPutRTShaderResourceView.GetAddressOf()));
+
+
+		
+		D3D11_TEXTURE2D_DESC texDesc = {};
+		float outPutWidth = windowWidth;
+		float outPutHeight = windowHeight;
+		/*float outPutWidth = 4096;
+			float outPutHeight = 4096;*/
+		DXGI_FORMAT srcFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+		texDesc.Width = outPutWidth;
+		texDesc.Height = outPutHeight;
+		texDesc.MipLevels = 1;
+		texDesc.ArraySize = 1;
+		texDesc.Format = srcFormat;
+		texDesc.SampleDesc.Count = 1;
+		texDesc.SampleDesc.Quality = 0;
+		texDesc.Usage = D3D11_USAGE_DEFAULT;
+		texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		texDesc.CPUAccessFlags = 0;
+		texDesc.MiscFlags = 0;
+
+		HR(g_Device->CreateTexture2D(&texDesc, nullptr, &m_DstTexture));
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = texDesc.Format;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.MipLevels = -1;
+
+		HR(g_Device->CreateShaderResourceView(m_DstTexture, &srvDesc, &m_DstView));
 
 
 
@@ -717,23 +763,6 @@ namespace Hook
 	bool bHasGetBackBuffer = false;
 	ComPtr<ID3D11ShaderResourceView> targetSRV;
 
-	void CopyToOutput(ID3D11Buffer** pDstBuffer, ID3D11Buffer** pSrcBuffer, size_t bufferSize)
-	{
-		D3D11_MAPPED_SUBRESOURCE mapped = {};
-		HRESULT hr = g_Context->Map(*pSrcBuffer, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mapped);
-		if (hr == E_PENDING) {
-			_MESSAGE("E_PENDING");
-		} else if (FAILED(hr)) {
-			_MESSAGE("FAILED");
-		} else {
-			// Copy the buffer data to memory
-			memcpy(pDstBuffer, mapped.pData, sizeof(*pSrcBuffer));
-
-			// Unmap the source buffer
-			g_Context->Unmap(*pSrcBuffer, 0);
-		}
-	}
-
 	void D3D::UpdateScene(FTSData* currData)
 	{
 
@@ -750,6 +779,8 @@ namespace Hook
 			if (tempWchar)
 					free((void*)tempWchar);
 			bChangeAimTexture = false;
+
+			g_Context->GenerateMips(mTextDDS_SRV.Get());
 		}
 
 #pragma region FO4GameConstantBuffer
@@ -821,29 +852,6 @@ namespace Hook
 		}
 #pragma endregion
 
-		
-	}
-
-	void D3D::GrabScreen()
-	{
-
-		g_Context->OMSetRenderTargets(1, mRTRenderTargetView.GetAddressOf(), tempSV);
-
-		g_Context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
-		g_Context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
-
-		g_Context->VSSetConstantBuffers(1, 1, &targetVertexConstBufferOutPut);
-		g_Context->VSSetConstantBuffers(8, 1, &targetVertexConstBufferOutPut1p5);
-
-		mBackBuffer->GetDesc(&bbDesc);
-		bbDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-		bbDesc.CPUAccessFlags = 0;
-		bbDesc.Usage = D3D11_USAGE_DEFAULT;
-		bbDesc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
-
-		//HR(g_Device->CreateTexture2D(&bbDesc, nullptr, &mDynamicTexture));
-		g_Context->CopyResource(mBackBufferCopy, mBackBuffer);
-
 		D3D11_MAPPED_SUBRESOURCE mappedDataA;
 		HR(g_Context->Map(instance().m_pScopeEffectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataA));
 		memcpy_s(mappedDataA.pData, sizeof(ScopeEffectShaderData), &instance().scopeData, sizeof(ScopeEffectShaderData));
@@ -861,18 +869,40 @@ namespace Hook
 		HR(g_Context->Map(instance().m_pConstantBufferData.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData));
 		memcpy_s(mappedData.pData, sizeof(VSConstantData), &instance().constBufferData, sizeof(VSConstantData));
 		g_Context->Unmap(instance().m_pConstantBufferData.Get(), 0);
+		
+	}
+
+	void D3D::GrabScreen()
+	{
+
+		g_Context->OMSetRenderTargets(1, mRTRenderTargetView.GetAddressOf(), tempSV);
+
+		g_Context->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
+		g_Context->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
+
+		g_Context->VSSetConstantBuffers(1, 1, &targetVertexConstBufferOutPut);
+		g_Context->VSSetConstantBuffers(8, 1, &targetVertexConstBufferOutPut1p5);
+
+		/*mBackBuffer->GetDesc(&bbDesc);
+		bbDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		bbDesc.CPUAccessFlags = 0;
+		bbDesc.Usage = D3D11_USAGE_DEFAULT;
+		bbDesc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;*/
+
+		//HR(g_Device->CreateTexture2D(&bbDesc, nullptr, &mDynamicTexture));
+		//g_Context->CopyResource(mBackBufferCopy, mBackBuffer);
 
 		UINT stride = sizeof(Vertex);
 		UINT offset = 0;
 
 		// 指定图元类型为三角形列表
 		g_Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		g_Context->IASetInputLayout(gdc_pVertexLayout);
+		g_Context->IASetIndexBuffer(gdc_pIndexBuffer, DXGI_FORMAT_R32_UINT, offset);
+		g_Context->IASetVertexBuffers(0, 1, &gdc_pVertexBuffer, &stride, &offset);
 
 		g_Context->OMSetBlendState(BSTransparent.Get(), nullptr, 0xFFFFFFFF);
-		g_Context->IASetInputLayout(gdc_pVertexLayout);
 		g_Context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
-
-		//g_Context->VSSetConstantBuffers(1, 1, m_VSBuffer.GetAddressOf());
 
 		g_Context->PSSetConstantBuffers(4, 1, m_pConstantBufferData.GetAddressOf());
 		g_Context->PSSetConstantBuffers(5, 1, m_pScopeEffectBuffer.GetAddressOf());
@@ -880,114 +910,88 @@ namespace Hook
 		g_Context->PSSetShaderResources(4, 1, instance().mShaderResourceView.GetAddressOf());
 		g_Context->PSSetShaderResources(5, 1, instance().mTextDDS_SRV.GetAddressOf());
 
-		g_Context->IASetIndexBuffer(gdc_pIndexBuffer, DXGI_FORMAT_R32_UINT, offset);
-		g_Context->IASetVertexBuffers(0, 1, &gdc_pVertexBuffer, &stride, &offset);
+		
 
+		bSelfDraw = true;
 		g_Context->DrawIndexed(3, 0, 0);
+		bSelfDraw = false;
 
 		//g_Context->OMSetRenderTargets(1, &tempRt, tempSV);
 	}
 
-	void D3D::RenderToReticleTextureNew(UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation)
+	void D3D::RenderToReticleTexture()
 	{
-		if (!bIsFirst && isEnableRender && targetVS.Get() && targetVertexConstBufferOutPut 
-			//&& targetVertexConstBufferOutPut1p5.Get() && targetVertexConstBufferOutPut1.Get()
-			)
+		if (!bIsFirst && isEnableRender)
 		{
-			
-
 			g_Context->OMSetRenderTargets(1, m_pRenderTargetView.GetAddressOf(), nullptr);
 
-			D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
-			ZeroMemory(&rtvDesc, sizeof(rtvDesc));
-			rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;            
-			rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;  
-			rtvDesc.Texture2D.MipSlice = 0;                         
+			g_Context->CopyResource(m_DstTexture, mRealBackBuffer);
 
-			UINT srcWidth = windowWidth;
-			UINT srcHeight = windowHeight;
-			/*UINT srcWidth = copyFTSposX;
-			UINT srcHeight = copyFTSposY;*/
-			float outPutWidth = windowWidth;
-			float outPutHeight = windowHeight;
-			/*float outPutWidth = 4096;
-			float outPutHeight = 4096;*/
-			DXGI_FORMAT srcFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			g_Context->VSSetShader(m_pVertexShader_Legacy.Get(), nullptr, 0);
+			g_Context->PSSetShader(m_pPixelShader_Legacy.Get(), nullptr, 0);
+			g_Context->PSSetConstantBuffers(4, 1, m_pConstantBufferData.GetAddressOf());
+			g_Context->PSSetConstantBuffers(5, 1, m_pScopeEffectBuffer.GetAddressOf());
 
-			ID3D11Texture2D* pDstTexture = nullptr;
-			ID3D11ShaderResourceView* pDstView = nullptr;
-			D3D11_TEXTURE2D_DESC texDesc = {};
+			D3D11_DEPTH_STENCIL_DESC tempDSD;
+			D3D11_DEPTH_STENCILOP_DESC tempDSOPD;
+			tempDSOPD.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+			tempDSOPD.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+			tempDSOPD.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+			tempDSOPD.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
-			texDesc.Width = outPutWidth;
-			texDesc.Height = outPutHeight;
-			texDesc.MipLevels = 1;
-			texDesc.ArraySize = 1;
-			texDesc.Format = srcFormat;
-			texDesc.SampleDesc.Count = 1;
-			texDesc.SampleDesc.Quality = 0;
-			texDesc.Usage = D3D11_USAGE_DEFAULT;
-			texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-			texDesc.CPUAccessFlags = 0;
-			texDesc.MiscFlags = 0;
+			tempDSD.DepthEnable = false;
+			tempDSD.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+			tempDSD.DepthFunc = D3D11_COMPARISON_LESS;
+			tempDSD.StencilEnable = false;
+			tempDSD.StencilReadMask = 255;
+			tempDSD.StencilWriteMask = 255;
+			tempDSD.FrontFace = tempDSOPD;
+			tempDSD.BackFace = tempDSOPD;
 
-			HR(g_Device->CreateTexture2D(&texDesc, nullptr, &pDstTexture));
+			HR(g_Device->CreateDepthStencilState(&tempDSD, targetDepthStencilState.GetAddressOf()));
+			g_Context->OMSetDepthStencilState(targetDepthStencilState.Get(), 0);
+			g_Context->VSSetConstantBuffers(1, 1, &targetVertexConstBufferOutPut);
+			g_Context->VSSetConstantBuffers(2, 1, &targetVertexConstBufferOutPut1p5);
 
-			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-			srvDesc.Format = texDesc.Format;
-			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-			srvDesc.Texture2D.MostDetailedMip = 0;
-			srvDesc.Texture2D.MipLevels = -1;
+			UINT stride = sizeof(Vertex);
+			UINT offset = 0;
 
-			HR(g_Device->CreateShaderResourceView(pDstTexture, &srvDesc, &pDstView));
+			g_Context->OMSetBlendState(mTransparentBS, nullptr, 0xFFFFFFFF);
+			g_Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			g_Context->IASetInputLayout(gdc_pVertexLayout);
+			g_Context->IASetIndexBuffer(gdc_pIndexBuffer, DXGI_FORMAT_R32_UINT, offset);
+			g_Context->IASetVertexBuffers(0, 1, &gdc_pVertexBuffer, &stride, &offset);
 
-			UINT dstSubresource = D3D11CalcSubresource(0, 0, 1);  
-			UINT srcSubresource = D3D11CalcSubresource(0, 0, 1);  
-			UINT dstZ = 0;                                        
+			g_Context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
+			g_Context->PSSetShaderResources(4, 1, &m_DstView);
+			g_Context->PSSetShaderResources(5, 1, instance().mTextDDS_SRV.GetAddressOf());
 
-			float srcAspect = (float)srcWidth / (float)srcHeight;           
-			float dstAspect = (float)texDesc.Width / (float)texDesc.Height;  
+			bSelfDraw = true;
+			g_Context->DrawIndexed(3, 0, 0);
+			bSelfDraw = false;
 
-			UINT copyWidth, copyHeight; 
-			if (srcAspect > dstAspect) {
-					copyWidth = (UINT)(dstAspect * (float)srcHeight);
-					copyHeight = srcHeight;
-			} else if (srcAspect < dstAspect) {
-					copyWidth = srcWidth;
-					copyHeight = (UINT)((float)srcWidth / dstAspect);
-			} else {
-					copyWidth = srcWidth;
-					copyHeight = srcHeight;
-			}
 
-			D3D11_BOX srcBox = {};
-			UINT srcCenterX = srcWidth / 2;
-			UINT srcCenterY = srcHeight / 2;
-			/*UINT srcCenterX = srcWidth;
-			UINT srcCenterY = srcHeight;*/
+			//g_Context->OMSetRenderTargets(1, m_pRenderTargetView.GetAddressOf(), nullptr);
 
-			srcBox.left = srcCenterX - copyWidth / 2;     
-			srcBox.right = srcCenterX + copyWidth / 2;    
-			srcBox.top = srcCenterY - copyHeight / 2;     
-			srcBox.bottom = srcCenterY + copyHeight / 2;  
-			srcBox.front = 0;                             // must be zero
-			srcBox.back = 1;                              // muse be one
+			//g_Context->PSSetShader(m_outPutPixelShader_Legacy.Get(), nullptr, 0);
+			//g_Context->CopyResource(m_DstTexture, mRTRenderTargetTexture.Get());
 
-			UINT dstCenterX = texDesc.Width / 2;
-			UINT dstCenterY = texDesc.Height / 2;
+			//g_Context->PSSetShaderResources(6, 1, &m_DstView);
 
-			copyWidth = min(copyWidth, texDesc.Width);
-			copyHeight = min(copyHeight, texDesc.Height);
+			//bSelfDraw = true;
+			//g_Context->DrawIndexed(3, 0, 0);
+			//bSelfDraw = false;
 
-			UINT dstX = dstCenterX - copyWidth / 2;
-			UINT dstY = dstCenterY - copyHeight / 2;
+		}
+	}
 
-			dstX = max(dstX, 0);
-			dstY = max(dstY, 0);
-
-			//g_Context->CopySubresourceRegion(pDstTexture, dstSubresource, dstX, dstY, dstZ, mRTRenderTargetTexture.Get(), srcSubresource, &srcBox);
-
-			//g_Context->GenerateMips(pDstView);
-			g_Context->CopyResource(pDstTexture, mRTRenderTargetTexture.Get());
+	void D3D::RenderToReticleTextureNew(UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation)
+	{
+		if (targetVS.Get() && targetVertexConstBufferOutPut)
+		{
+			g_Context->OMSetRenderTargets(1, m_pRenderTargetView.GetAddressOf(), nullptr);
+                                          
+			g_Context->CopyResource(m_DstTexture, mRTRenderTargetTexture.Get());
 
 			g_Context->VSSetShader(targetVS.Get(), targetVSClassInstance.GetAddressOf(), targetVSNumClassesInstance);
 			g_Context->PSSetShader(m_outPutPixelShader.Get(), nullptr, 0);
@@ -1010,8 +1014,6 @@ namespace Hook
 			tempDSD.FrontFace = tempDSOPD;
 			tempDSD.BackFace = tempDSOPD;
 
-
-
 			HR(g_Device->CreateDepthStencilState(&tempDSD, targetDepthStencilState.GetAddressOf()));
 
 			g_Context->OMSetDepthStencilState(targetDepthStencilState.Get(), 0);
@@ -1026,26 +1028,12 @@ namespace Hook
 			g_Context->IASetVertexBuffers(0, 1, targetVertexBuffer.GetAddressOf(), &targetVertexBufferStrides, &targetVertexBufferOffsets);
 
 			g_Context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
-			/*g_Context->PSSetShaderResources(0, 1, mShaderResourceView.GetAddressOf());
-			g_Context->PSSetShaderResources(5, 1, mShaderResourceView.GetAddressOf());*/
-			g_Context->PSSetShaderResources(0, 1, &pDstView);
-			g_Context->PSSetShaderResources(6, 1, &pDstView);
+			g_Context->PSSetShaderResources(0, 1, &m_DstView);
+			g_Context->PSSetShaderResources(6, 1, &m_DstView);
 
 			bSelfDraw = true;
 			g_Context->DrawIndexed(IndexCount, StartIndexLocation, BaseVertexLocation);
 			bSelfDraw = false;
-
-			if (pDstTexture)
-				pDstTexture->Release();
-			if (pDstView)
-				pDstView->Release();
-
-
-			/*targetVertexConstBufferOutPut->Release();
-			targetVertexConstBufferOutPut1p5->Release();
-			targetVertexConstBufferOutPut1->Release();*/
-			
-			
 		}
 			
 	}
@@ -1160,11 +1148,11 @@ namespace Hook
 			{
 				IDXGISwapChain* mSwapChain;
 				HR(g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain)));
-				HR(g_Swapchain->GetBuffer(0, IID_PPV_ARGS(&mRealBackBuffer)));
+				HR(mSwapChain->GetBuffer(0, IID_PPV_ARGS(&mRealBackBuffer)));
 				HR(g_Swapchain->GetBuffer(0, IID_PPV_ARGS(&mBackBuffer)));
 
-				HR(g_Device->CreateRenderTargetView(mRealBackBuffer, nullptr, m_pRenderTargetView.GetAddressOf()));
-				HR(g_Device->CreateShaderResourceView(mBackBuffer, NULL, mShaderResourceView.GetAddressOf()));
+				HR(g_Device->CreateRenderTargetView(mBackBuffer, nullptr, m_pRenderTargetView.GetAddressOf()));
+				HR(g_Device->CreateShaderResourceView(mRealBackBuffer, NULL, mShaderResourceView.GetAddressOf()));
 
 				bHasGetBackBuffer = true;
 			}
@@ -1191,9 +1179,13 @@ namespace Hook
 
 				UpdateScene(currData);
 				instance().GrabScreen();
-				instance().RenderToReticleTextureNew(targetIndexCount, targetStartIndexLocation, targetBaseVertexLocation);
-				g_Context->OMSetRenderTargets(1, &tempRt, tempSV);
 
+				if (currData->legacyMode || bLegacyMode)
+					instance().RenderToReticleTexture();
+				else
+					instance().RenderToReticleTextureNew(targetIndexCount, targetStartIndexLocation, targetBaseVertexLocation);
+				
+				g_Context->OMSetRenderTargets(1, &tempRt, tempSV);
 
 				bHasDraw = true;
 			}
@@ -1202,6 +1194,7 @@ namespace Hook
 
 	void D3D::ResetUIData(FTSData* currData)
 	{
+		bLegacyMode = currData->legacyMode;
 		UsingSTS_UI = ScopeDataHandler::GetSingleton()->GetCurrentFTSData()->UsingSTS;
 		scopeFrame_UI = currData->scopeFrame;
 		IsCircle_UI = currData->shaderData.IsCircle;
@@ -1223,8 +1216,7 @@ namespace Hook
 		scopeSwayAmount_UI = currData->shaderData.parallax.scopeSwayAmount;
 		maxTravel_UI = currData->shaderData.parallax.maxTravel;
 
-		bEnableZMove = currData->shaderData.bEnableZMove;
-		_MESSAGE("bEnableNVGEffect: %i, currData->shaderData.bCanEnableNV: %i", bEnableNVGEffect, currData->shaderData.bCanEnableNV);
+		bEnableZMove = currData->shaderData.bEnableZMove;;
 		bEnableNVGEffect = currData->shaderData.bCanEnableNV;
 		nvIntensity_UI = currData->shaderData.nvIntensity;
 		baseWeaponPos_UI = currData->shaderData.baseWeaponPos;
@@ -1283,15 +1275,6 @@ namespace Hook
 				ImGui::NewLine();
 			}
 
-			if (ImGui ::TreeNode("Culling Menu")) {
-				
-				ImGui::SliderInt("countStride", &countStride,0,25564);
-				ImGui::SliderInt("countIndexCount", &countIndexCount,0,25564);
-
-				ImGui::TreePop();
-				ImGui::NewLine();
-			}
-
 			if (ImGui::Checkbox("Edit Mode", &bEnableEditMode)) {
 
 				if (player) {
@@ -1333,6 +1316,7 @@ namespace Hook
 
 				ImGui::NewLine();
 				if (ImGui::TreeNode("Main Menu")) {
+					ImGui::Checkbox("Legacy Mode", &bLegacyMode);
 					ImGui::Checkbox("Disable Culling", &UsingSTS_UI);
 					ImGui::Checkbox("Disable Scope Effect While Bolt", &bDisableWhileBolt);
 					ImGui::DragInt("Effect Delay(ms)", (int*)&scopeFrame_UI, 1, 0, 5000);
@@ -1385,6 +1369,7 @@ namespace Hook
 
 				if (ImGui::Button("Save Setting", { 100, 40 })) {
 					currData = ScopeDataHandler::GetSingleton()->GetCurrentFTSData();
+					currData->legacyMode = bLegacyMode;
 					currData->UsingSTS = UsingSTS_UI;
 					currData->scopeFrame = scopeFrame_UI;
 					currData->shaderData.IsCircle = IsCircle_UI;
@@ -1412,31 +1397,6 @@ namespace Hook
 					currData->shaderData.bBoltDisable = bDisableWhileBolt;
 					currData->shaderData.nvIntensity = nvIntensity_UI;
 
-					//UsingSTS_UI = NULL;
-					//scopeFrame_UI = NULL;
-					//IsCircle_UI = NULL;
-					//camDepth_UI = NULL;
-					//ReticleSize_UI = NULL;
-					//minZoom_UI = NULL;
-					//maxZoom_UI = NULL;
-					//PositionOffset_UI[0] = NULL;
-					//PositionOffset_UI[1] = NULL;
-					//OriPositionOffset_UI[0] = NULL;
-					//OriPositionOffset_UI[1] = NULL;
-					//Size_UI[0] = NULL;
-					//Size_UI[1] = NULL;
-					//OriSize_UI[0] = NULL;
-					//OriSize_UI[1] = NULL;
-					//radius_UI = NULL;
-					//relativeFogRadius_UI = NULL;
-					//scopeSwayAmount_UI = NULL;
-					//maxTravel_UI = NULL;
-					//bEnableZMove = NULL;
-					//baseWeaponPos_UI = NULL;
-					//MovePercentage_UI = NULL;
-					//bEnableNVGEffect = NULL;
-					//bDisableWhileBolt = NULL;
-					//nvIntensity_UI = NULL;
 					ScopeData::ScopeDataHandler::GetSingleton()->WriteCurrentFTSData();
 					ResetUIData(currData);
 					instance().bRefreshChar = true;
@@ -1591,7 +1551,6 @@ namespace Hook
 	void __stdcall D3D::vsSetConstantBuffers(ID3D11DeviceContext* pContext, UINT StartSlot, UINT NumBuffers, ID3D11Buffer* const* ppConstantBuffers)
 	{
 
-
 		oldFuncs.vsSetConstantBuffers(pContext, StartSlot, NumBuffers, ppConstantBuffers);
 	}
 
@@ -1686,6 +1645,51 @@ namespace Hook
 		return ret;
 	}
 
+
+	void ClipTexture()
+	{
+		//float srcAspect = (float)srcWidth / (float)srcHeight;
+		//float dstAspect = (float)texDesc.Width / (float)texDesc.Height;
+
+		//UINT copyWidth, copyHeight;
+		//if (srcAspect > dstAspect) {
+		//		copyWidth = (UINT)(dstAspect * (float)srcHeight);
+		//		copyHeight = srcHeight;
+		//} else if (srcAspect < dstAspect) {
+		//		copyWidth = srcWidth;
+		//		copyHeight = (UINT)((float)srcWidth / dstAspect);
+		//} else {
+		//		copyWidth = srcWidth;
+		//		copyHeight = srcHeight;
+		//}
+
+		//D3D11_BOX srcBox = {};
+		//UINT srcCenterX = srcWidth / 2;
+		//UINT srcCenterY = srcHeight / 2;
+		///*UINT srcCenterX = srcWidth;
+		//UINT srcCenterY = srcHeight;*/
+
+		//srcBox.left = srcCenterX - copyWidth / 2;
+		//srcBox.right = srcCenterX + copyWidth / 2;
+		//srcBox.top = srcCenterY - copyHeight / 2;
+		//srcBox.bottom = srcCenterY + copyHeight / 2;
+		//srcBox.front = 0;                             // must be zero
+		//srcBox.back = 1;                              // muse be one
+
+		//UINT dstCenterX = texDesc.Width / 2;
+		//UINT dstCenterY = texDesc.Height / 2;
+
+		//copyWidth = min(copyWidth, texDesc.Width);
+		//copyHeight = min(copyHeight, texDesc.Height);
+
+		//UINT dstX = dstCenterX - copyWidth / 2;
+		//UINT dstY = dstCenterY - copyHeight / 2;
+
+		//dstX = max(dstX, 0);
+		//dstY = max(dstY, 0);
+
+		//g_Context->CopySubresourceRegion(pDstTexture, dstSubresource, dstX, dstY, dstZ, mRTRenderTargetTexture.Get(), srcSubresource, &srcBox);
+	}
 
 	void D3D::ShowMenu(bool flag){isShow = flag;}
 	void D3D::QueryChangeReticleTexture() { bChangeAimTexture = true; }
