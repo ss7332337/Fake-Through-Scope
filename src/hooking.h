@@ -302,7 +302,7 @@ namespace Hook
 			int isCircle = 1;
 			int EnableNV = 0;
 			int EnableMerge = 0;
-			float padding = 0;
+			float baseFovAdjustTarget = 0;
 
 			XMFLOAT2 ScopeEffect_Size = { 0, 0 };
 			XMFLOAT2 ScopeEffect_OriPositionOffset = { 0, 0 };
@@ -310,7 +310,8 @@ namespace Hook
 			XMFLOAT2 ScopeEffect_Offset = { 0, 0 };
 
 			XMFLOAT3 eyeDirection = {0,0,0};
-			float padding1 = 0;
+			float targetAdjustFov = 0;
+
 			XMFLOAT3 eyeDirectionLerp = {0,0,0};
 			float padding2 = 0;
 			XMFLOAT3 eyeTranslationLerp = { 0, 0, 0 };

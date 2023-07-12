@@ -38,13 +38,19 @@ namespace ScopeData
 		float movePercentage = 0;
 
 		float camDepth = 1.0F;
+
 		float minZoom = 1.0F;
 		float maxZoom = 4.0F;
+
 		float PositionOffset[2] = {0.0F,0.0F};
 		float OriPositionOffset[2] = { 0.0F, 0.0F };
+
 		float Size[2] = { 200.0F, 0.0F };
 		float OriSize[2] = { 200.0F, 0.0F };
+
 		float ReticleSize = 4;
+
+		float fovAdjust;
 		Parallax parallax;
 	};
 
@@ -81,7 +87,7 @@ namespace ScopeData
 
 
 		static ScopeDataHandler* GetSingleton();
-
+		
 		void ReadDefaultScopeDataFile();
 		void ReadCustomScopeDataFiles(std::string path);
 		void TestingJson();
@@ -106,7 +112,7 @@ namespace ScopeData
 		void SetGuiKey(unsigned int keycode);
 
 		void SetIsUpscaler(bool);
-
+		void UpdateFTSData(std::string path);
 		const char* GetNVGComboKeyStr();
 
 		//bool ZoomDataWrite(RE::TESObjectWEAP::InstanceData* instance);
@@ -115,6 +121,7 @@ namespace ScopeData
 		std::multimap<std::string, FTSData*>* GetScopeDataMap();
 
 	private:
+		
 		bool ReadScopeData(std::string path);
 		ScopeDataHandler() = default;
 		ScopeDataHandler(const ScopeDataHandler&) = delete;

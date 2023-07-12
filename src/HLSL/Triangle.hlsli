@@ -45,10 +45,10 @@ cbuffer ScopeEffectData : register(b5)
 	float2 ScopeEffect_OriSize;
 	float2 ScopeEffect_Offset;
 	float3 eyeDirection;
-	float padding1 = 0;
+	float baseAdjustFov = 0;
 
 	float3 eyeDirectionLerp;
-	float padding2 = 0;
+	float targetAdjustFov = 0;
 
 	float3 eyeTranslationLerp;
 	float padding3 = 0;
@@ -155,4 +155,19 @@ float4 NVGEffect(float4 color, float2 texcoord)
 	intensity = 1.0f - larger * OffIntensity;
 
 	return float4(saturate(nvColor.xyz * intensity * nvIntensity), 1);
+}
+
+float GetLengthDiff(float length)
+{
+	return (length * tan(radians((GameFov)/2))) / tan(radians((90)/2)) ;
+}
+
+float2 GetCoordDiff(float2 coord)
+{
+	return float2(GetLengthDiff(coord.x), GetLengthDiff(coord.y));
+}
+
+float3 GetCoordDiff(float3 coord)
+{
+	return float3(GetLengthDiff(coord.x), GetLengthDiff(coord.y),GetLengthDiff(coord.z));
 }

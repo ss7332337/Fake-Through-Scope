@@ -464,8 +464,10 @@ void HookedUpdate()
 			_MESSAGE("tempOut: %f, %f, %f", tempOut.x, tempOut.y, tempOut.z);
 		}
 
+		_MESSAGE("\nfovAdjustCurrent: %f; fovAdjustTarget: %f; firstPersonFOV: %f; worldFOV: %f; fovAnimatorAdjust: %f",
+			pcam->fovAdjustCurrent, pcam->fovAdjustTarget, pcam->firstPersonFOV, pcam->worldFOV, pcam->fovAnimatorAdjust);
 		
-
+		
 		NiPointer<bhkCharacterController> con = player->currentProcess->middleHigh->charController;
 		uintptr_t charProxy = *(uintptr_t*)((uintptr_t)con.get() + 0x470);
 		hkTransform* charProxyTransform = (hkTransform*)(charProxy + 0x40);
@@ -518,10 +520,20 @@ void HookedUpdate()
 				scopeTimer = 0;
 			}
 
+
+			_MESSAGE("%f", RE::UI::GetSingleton()->uiTimer.delta);
+			
+
 			hookIns->SetGameConstData(gcb);
 			HandleScopeNode();
 
-			if (IsSideAim() || RE::UI::GetSingleton()->GetMenuOpen("VignetteMenu")) {
+			//PauseMenu
+			//WorkshopMenu
+			//CursorMenu
+
+			if (IsSideAim() || RE::UI::GetSingleton()->GetMenuOpen("PauseMenu") || RE::UI::GetSingleton()->GetMenuOpen("WorkshopMenu") 
+				//|| RE::UI::GetSingleton()->GetMenuOpen("CursorMenu")
+				) {
 				hookIns->EnableRender(false);
 				hookIns->QueryRender(false);
 			} 

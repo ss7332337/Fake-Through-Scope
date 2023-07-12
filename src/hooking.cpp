@@ -24,6 +24,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 bool bLegacyMode;
 bool UsingSTS_UI;
 int scopeFrame_UI;
+float fovBase_UI;
 bool IsCircle_UI;
 float camDepth_UI;
 float ReticleSize_UI;
@@ -430,7 +431,7 @@ namespace Hook
 
 		auto worldSpacePoint = camRot * (objTrans - camTrans);
 
-		XMMATRIX projectionMatrix = GetProjectionMatrix(fov);
+		XMMATRIX projectionMatrix = GetProjectionMatrix(pcam->firstPersonFOV + pcam->fovAdjustTarget);
 
 		XMVECTOR clipPosition = XMVectorSet(worldSpacePoint.x, worldSpacePoint.y, worldSpacePoint.z, 1.0f);
 		clipPosition = XMVector4Transform(clipPosition, projectionMatrix);  // Apply projection matrix
@@ -753,11 +754,7 @@ namespace Hook
 	UINT targetVertexBufferStrides;
 	UINT targetVertexBufferOffsets;
 
-
 	ComPtr<ID3D11ShaderResourceView> DrawIndexedSRV;
-	float copyFTSposX;
-	float copyFTSposY;
-	
 
 	bool bHasDraw = false;
 	bool bHasGetBackBuffer = false;
@@ -807,8 +804,9 @@ namespace Hook
 		scopeData.eyeDirectionLerp = { gameConstBuffer.VirDirLerp.x, gameConstBuffer.VirDirLerp.y, gameConstBuffer.VirDirLerp.z };
 		scopeData.eyeTranslationLerp = gameConstBuffer.VirTransLerp.GetXMFLOAT3();
 		scopeData.FTS_ScreenPos = { gameConstBuffer.ftsScreenPos.x, gameConstBuffer.ftsScreenPos.y };
-		copyFTSposX = gameConstBuffer.ftsScreenPos.x;
-		copyFTSposY = gameConstBuffer.ftsScreenPos.y;
+
+		
+		scopeData.targetAdjustFov = pcam->fovAdjustCurrent;
 
 		if (bResetZoomDelta) {
 			gameZoomDelta = currData->shaderData.minZoom;
@@ -822,6 +820,7 @@ namespace Hook
 
 		scopeData.ScopeEffect_Zoom = gameZoomDelta;
 		scopeData.GameFov = pcam->firstPersonFOV;
+
 #pragma endregion
 
 #pragma region MyScopeShaderData
@@ -842,6 +841,7 @@ namespace Hook
 			scopeData.ScopeEffect_OriPositionOffset = { currData->shaderData.OriPositionOffset[0], currData->shaderData.OriPositionOffset[1] };
 			scopeData.ScopeEffect_OriSize = { currData->shaderData.OriSize[0], currData->shaderData.OriSize[1] };
 			scopeData.ScopeEffect_Size = { currData->shaderData.Size[0], currData->shaderData.Size[1] };
+			scopeData.baseFovAdjustTarget = currData->shaderData.fovAdjust;
 
 			vsConstanData.CurrRootPos = gameConstBuffer.rootPos.GetXMFLOAT3();
 			vsConstanData.CurrWeaponPos = gameConstBuffer.weaponPos.GetXMFLOAT3();
@@ -969,19 +969,6 @@ namespace Hook
 			bSelfDraw = true;
 			g_Context->DrawIndexed(3, 0, 0);
 			bSelfDraw = false;
-
-
-			//g_Context->OMSetRenderTargets(1, m_pRenderTargetView.GetAddressOf(), nullptr);
-
-			//g_Context->PSSetShader(m_outPutPixelShader_Legacy.Get(), nullptr, 0);
-			//g_Context->CopyResource(m_DstTexture, mRTRenderTargetTexture.Get());
-
-			//g_Context->PSSetShaderResources(6, 1, &m_DstView);
-
-			//bSelfDraw = true;
-			//g_Context->DrawIndexed(3, 0, 0);
-			//bSelfDraw = false;
-
 		}
 	}
 
@@ -994,7 +981,8 @@ namespace Hook
 			g_Context->CopyResource(m_DstTexture, mRTRenderTargetTexture.Get());
 
 			g_Context->VSSetShader(targetVS.Get(), targetVSClassInstance.GetAddressOf(), targetVSNumClassesInstance);
-			g_Context->PSSetShader(m_outPutPixelShader.Get(), nullptr, 0);
+			g_Context->PSSetShader(m_outPutPixelShader_Legacy.Get(), nullptr, 0);
+			//g_Context->PSSetShader(m_outPutPixelShader.Get(), nullptr, 0);
 			g_Context->PSSetConstantBuffers(4, 1, m_pConstantBufferData.GetAddressOf());
 			g_Context->PSSetConstantBuffers(5, 1, m_pScopeEffectBuffer.GetAddressOf());
 
@@ -1146,7 +1134,9 @@ namespace Hook
 
 			if (!bHasGetBackBuffer) 
 			{
-				IDXGISwapChain* mSwapChain;
+				//IDXGISwapChain* mSwapChain = RE::BSGraphics::RendererData::GetSingleton()->renderWindow->swapChain;
+				IDXGISwapChain1* mSwapChain;
+				g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain));
 				HR(g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain)));
 				HR(mSwapChain->GetBuffer(0, IID_PPV_ARGS(&mRealBackBuffer)));
 				HR(g_Swapchain->GetBuffer(0, IID_PPV_ARGS(&mBackBuffer)));
@@ -1154,9 +1144,10 @@ namespace Hook
 				HR(g_Device->CreateRenderTargetView(mBackBuffer, nullptr, m_pRenderTargetView.GetAddressOf()));
 				HR(g_Device->CreateShaderResourceView(mRealBackBuffer, NULL, mShaderResourceView.GetAddressOf()));
 
+				//mShaderResourceView = RE::BSGraphics::RendererData::GetSingleton()->renderTargets[2].srView;
+
 				bHasGetBackBuffer = true;
 			}
-
 
 			if (isEnableRender && pcam && player)
 			{
@@ -1169,6 +1160,8 @@ namespace Hook
 					InitResource();
 					bIsFirst = false;
 				}
+
+
 
 				auto currData = sdh->GetCurrentFTSData();
 
@@ -1242,18 +1235,6 @@ namespace Hook
 				return;
 			}
 
-			/*float textMatRow1[4] = { localTestingMat._11, localTestingMat._12, localTestingMat._13, localTestingMat._14 };
-			float textMatRow2[4] = { localTestingMat._21, localTestingMat._22, localTestingMat._23, localTestingMat._24 };
-			float textMatRow3[4] = { localTestingMat._31, localTestingMat._32, localTestingMat._33, localTestingMat._34 };
-			float textMatRow4[4] = { localTestingMat._41, localTestingMat._42, localTestingMat._43, localTestingMat._44 };*/
-
-			ImGui::DragFloat4("row1: ", localTestingMat.m[0], 0.01F);
-			ImGui::DragFloat4("row2: ", localTestingMat.m[1], 0.01F);
-			ImGui::DragFloat4("row3: ", localTestingMat.m[2], 0.01F);
-			ImGui::DragFloat4("row4: ", localTestingMat.m[3], 0.01F);
-
-			
-
 			if (nvgComboKeyIndex != -1 && nvgMainKeyIndex != -1 && ImGui ::TreeNode("Key Binding")) {
 				nvgComboKeyIndex = sdh->comboNVKey + 1;
 				nvgMainKeyIndex = sdh->nvKey + 1;
@@ -1320,6 +1301,9 @@ namespace Hook
 					ImGui::Checkbox("Disable Culling", &UsingSTS_UI);
 					ImGui::Checkbox("Disable Scope Effect While Bolt", &bDisableWhileBolt);
 					ImGui::DragInt("Effect Delay(ms)", (int*)&scopeFrame_UI, 1, 0, 5000);
+
+					ImGui::Text("curr Base Fov Adjust %.3f", pcam->fovAdjustCurrent);
+					ImGui::DragFloat("Base Fov Adjust ", &fovBase_UI, 0.05F);
 					ImGui::NewLine();
 					ImGui::TreePop();
 				}
@@ -1396,6 +1380,7 @@ namespace Hook
 					currData->shaderData.parallax.maxTravel = maxTravel_UI;
 					currData->shaderData.bBoltDisable = bDisableWhileBolt;
 					currData->shaderData.nvIntensity = nvIntensity_UI;
+					currData->shaderData.fovAdjust = fovBase_UI;
 
 					ScopeData::ScopeDataHandler::GetSingleton()->WriteCurrentFTSData();
 					ResetUIData(currData);
@@ -1420,7 +1405,7 @@ namespace Hook
 
 					instance().scopeData.isCircle = IsCircle_UI;
 					instance().scopeData.camDepth = camDepth_UI;
-
+					instance().scopeData.baseFovAdjustTarget = fovBase_UI;
 
 					instance().scopeData.nvIntensity = nvIntensity_UI;
 
@@ -1446,18 +1431,8 @@ namespace Hook
 			auto abVirDirLerp = MatMulNi3(instance().gameConstBuffer.camMat, instance().gameConstBuffer.VirDirLerp);
 
 			auto camMat = instance().gameConstBuffer.camMat;
-
-			ImGui::Text("eyeDirection: %f, %f, %f", virDir.x, virDir.y, virDir.z);
-			ImGui::Text("abvirDir: %f, %f, %f", abvirDir.x, abvirDir.y, abvirDir.z);
-			ImGui::NewLine();
-			ImGui::Text("eyeDirectionLerp: %f, %f, %f", VirDirLerp.x, VirDirLerp.y, VirDirLerp.z);
-			ImGui::Text("abVirDirLerp: %f, %f, %f", abVirDirLerp.x, abVirDirLerp.y, abVirDirLerp.z);
-			ImGui::NewLine();
-			ImGui::Text("camMat R1: %f, %f, %f", gameConstBuffer.camMat.entry[0].pt[0], gameConstBuffer.camMat.entry[0].pt[1], gameConstBuffer.camMat.entry[0].pt[2]);
-			ImGui::Text("camMat R2: %f, %f, %f", gameConstBuffer.camMat.entry[1].pt[0], gameConstBuffer.camMat.entry[1].pt[1], gameConstBuffer.camMat.entry[1].pt[2]);
-			ImGui::Text("camMat R3: %f, %f, %f", gameConstBuffer.camMat.entry[2].pt[0], gameConstBuffer.camMat.entry[2].pt[1], gameConstBuffer.camMat.entry[2].pt[2]);
+			
 			ImGui::End();
-
 			ImGui::Render();
 		}
 
@@ -1616,29 +1591,38 @@ namespace Hook
 		DXGI_SWAP_CHAIN_DESC sd;
 		mSwapChain->GetDesc(&sd);*/
 		
+		
 		RECT rect;
-		auto window = (HWND)RE::BSGraphics::RendererData::GetSingleton()->renderWindow->hwnd;
+		auto window = GetActiveWindow();
+
+		IDXGISwapChain* mSwapChain;
+		HR(g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain)));
+
 		DXGI_SWAP_CHAIN_DESC sd;
-		RE::BSGraphics::RendererData::GetSingleton()->renderWindow->swapChain->GetDesc(&sd);
+		mSwapChain->GetDesc(&sd);
 
-		oldFuncs.wndProc = (WNDPROC)SetWindowLongPtr(window, GWLP_WNDPROC, (LONG_PTR)WndProcHandler);
-		::GetWindowRect(window, &oldRect);
 
-		if (GetWindowRect(window, &rect)) {
+
+		oldFuncs.wndProc = (WNDPROC)GetWindowLongPtr(window, GWLP_WNDPROC);
+		SetWindowLongPtr(sd.OutputWindow, GWLP_WNDPROC, (LONG_PTR)WndProcHandler);
+		::GetWindowRect(sd.OutputWindow, &oldRect);
+
+		if (GetWindowRect(sd.OutputWindow, &rect)) {
 			windowWidth = rect.right - rect.left;
 			windowHeight = rect.bottom - rect.top;
 		}
 
-		IMGUI_CHECKVERSION();
+		windowWidth =  RE::BSGraphics::RendererData::GetSingleton()->renderWindow->windowWidth;
+		windowHeight = RE::BSGraphics::RendererData::GetSingleton()->renderWindow->windowHeight;
+
 		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO();
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-		io.BackendFlags = ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_RendererHasVtxOffset;
+		(void)io;
 
 		ImGui::StyleColorsDark();
 
-		
-		ImGui_ImplWin32_Init(window);
+		IMGUI_CHECKVERSION();
+		ImGui_ImplWin32_Init(sd.OutputWindow);
 		ImGui_ImplDX11_Init((g_Device.Get()), (g_Context.Get()));
 
 

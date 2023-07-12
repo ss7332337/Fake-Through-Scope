@@ -46,6 +46,7 @@ namespace ScopeData
 			j["ShaderData"]["EnableNV"] = currentData->shaderData.bCanEnableNV;
 			j["ShaderData"]["bBoltDisable"] = currentData->shaderData.bBoltDisable;
 
+			j["ShaderData"]["fovAdjust"] = currentData->shaderData.fovAdjust;
 			j["ShaderData"]["BaseWeaponPos"] = currentData->shaderData.baseWeaponPos;
 			j["ShaderData"]["ZMovePercentage"] = currentData->shaderData.movePercentage;
 			j["ShaderData"]["NVIntensity"]  = currentData->shaderData.nvIntensity;
@@ -73,13 +74,63 @@ namespace ScopeData
 			j["ShaderData"]["Parallax"]["scopeSwayAmount"] = currentData->shaderData.parallax.scopeSwayAmount ;
 			j["ShaderData"]["Parallax"]["maxTravel"] = currentData->shaderData.parallax.maxTravel ;
 
-
 			std::ofstream o(temp);
 			o <<  j << std::endl;
 
 			f.close();
 			o.close();
 		}
+	}
+
+	void FTSData::ReloadFTSData()
+	{
+		std::ifstream f(path);
+		json j = json::parse(f);
+		legacyMode = j["LegacyMode"].is_null() ? true : (bool)j["LegacyMode"];
+		version = j["Version"].is_null() ? (int)currentFTSDataVerion : (int)j["Version"];
+		UsingSTS = j["UsingSTS"].is_null() ? false : (bool)j["UsingSTS"];
+		ZoomNodePath = j["ReticleTexturePath"].is_null() ? "Data/Textures/FTS/Default.dds" : j["ReticleTexturePath"];
+		//UnalignedMode = j["UnalignedMode"].is_null() ? true : (bool)j["UnalignedMode"];
+		scopeFrame = j["scopeFrame"].is_null() ? 1 : (unsigned int)j["scopeFrame"];
+
+		shaderData.IsCircle = j["ShaderData"]["IsCircle"].is_null() ? true : (bool)j["ShaderData"]["IsCircle"];
+		shaderData.bEnableZMove = j["ShaderData"]["EnableZMove"].is_null() ? true : (bool)j["ShaderData"]["EnableZMove"];
+		shaderData.bCanEnableNV = j["ShaderData"]["EnableNV"].is_null() ? true : (bool)j["ShaderData"]["EnableNV"];
+		shaderData.bBoltDisable = j["ShaderData"]["bBoltDisable"].is_null() ? true : (bool)j["ShaderData"]["bBoltDisable"];
+		shaderData.fovAdjust = j["ShaderData"]["fovAdjust"].is_null() ? 0.0F : (float)j["ShaderData"]["fovAdjust"];
+
+		shaderData.baseWeaponPos = j["ShaderData"]["BaseWeaponPos"].is_null() ? 0 : (float)j["ShaderData"]["BaseWeaponPos"];
+		shaderData.movePercentage = j["ShaderData"]["ZMovePercentage"].is_null() ? 0 : (float)j["ShaderData"]["ZMovePercentage"];
+
+		shaderData.camDepth = j["ShaderData"]["CamDepth"].is_null() ? 1 : (float)j["ShaderData"]["CamDepth"];
+		shaderData.nvIntensity = j["ShaderData"]["NVIntensity"].is_null() ? 3 : (float)j["ShaderData"]["NVIntensity"];
+		shaderData.ReticleSize = j["ShaderData"]["ReticleSize"].is_null() ? 4 : (float)j["ShaderData"]["ReticleSize"];
+
+		shaderData.minZoom = j["ShaderData"]["MinZoom"].is_null() ? 1 : (float)j["ShaderData"]["MinZoom"];
+		shaderData.maxZoom = j["ShaderData"]["MaxZoom"].is_null() ? 4 : (float)j["ShaderData"]["MaxZoom"];
+
+		shaderData.Size[0] = j["ShaderData"]["Size"]["x"].is_null() ? 100.0F : (float)j["ShaderData"]["Size"]["x"];
+		shaderData.Size[1] = j["ShaderData"]["Size"]["y"].is_null() ? 100.0F : (float)j["ShaderData"]["Size"]["y"];
+
+		shaderData.OriSize[0] = j["ShaderData"]["OriSize"]["x"].is_null() ? 100.0F : (float)j["ShaderData"]["OriSize"]["x"];
+		shaderData.OriSize[1] = j["ShaderData"]["OriSize"]["y"].is_null() ? 100.0F : (float)j["ShaderData"]["OriSize"]["y"];
+
+		shaderData.PositionOffset[0] = j["ShaderData"]["PositionOffset"]["x"].is_null() ? 0 : (float)j["ShaderData"]["PositionOffset"]["x"];
+		shaderData.PositionOffset[1] = j["ShaderData"]["PositionOffset"]["y"].is_null() ? 0 : (float)j["ShaderData"]["PositionOffset"]["y"];
+
+		shaderData.OriPositionOffset[0] = j["ShaderData"]["OriPositionOffset"]["x"].is_null() ? 0 : (float)j["ShaderData"]["OriPositionOffset"]["x"];
+		shaderData.OriPositionOffset[1] = j["ShaderData"]["OriPositionOffset"]["y"].is_null() ? 0 : (float)j["ShaderData"]["OriPositionOffset"]["y"];
+
+		shaderData.parallax.radius = j["ShaderData"]["Parallax"]["radius"].is_null() ? 2 : (float)j["ShaderData"]["Parallax"]["radius"];
+		shaderData.parallax.relativeFogRadius = j["ShaderData"]["Parallax"]["relativeFogRadius"].is_null() ? 9 : (float)j["ShaderData"]["Parallax"]["relativeFogRadius"];
+		shaderData.parallax.scopeSwayAmount = j["ShaderData"]["Parallax"]["scopeSwayAmount"].is_null() ? 3 : (float)j["ShaderData"]["Parallax"]["scopeSwayAmount"];
+		shaderData.parallax.maxTravel = j["ShaderData"]["Parallax"]["maxTravel"].is_null() ? 0.75F : (float)j["ShaderData"]["Parallax"]["maxTravel"];
+
+		ScopeData::ScopeDataHandler::GetSingleton()->SetCurrentFTSData(this);
+
+		f.close();
+
+		ScopeData::ScopeDataHandler::GetSingleton()->UpdateFTSData(path);
 	}
 
 	void ScopeDataHandler::ReloadCurrentFTSData()
@@ -377,7 +428,7 @@ namespace ScopeData
 		return &ScopeDataMap;
 	}
 
-	void UpdateFTSData(std::string path)
+	void ScopeDataHandler::UpdateFTSData(std::string path)
 	{
 		std::ifstream f(path);
 		json j = json::parse(f);
@@ -401,60 +452,6 @@ namespace ScopeData
 		o << j << std::endl;
 		f.close();
 		o.close();
-	}
-
-	void FTSData::ReloadFTSData()
-	{
-		std::ifstream f(path);
-		json j = json::parse(f);
-		legacyMode = j["LegacyMode"].is_null() ? true : (bool)j["LegacyMode"];
-		version = j["Version"].is_null() ? (int)currentFTSDataVerion : (int)j["Version"];
-		UsingSTS = j["UsingSTS"].is_null() ? false : (bool)j["UsingSTS"];
-		ZoomNodePath = j["ReticleTexturePath"].is_null() ? "Data/Textures/FTS/Default.dds" : j["ReticleTexturePath"];
-		//UnalignedMode = j["UnalignedMode"].is_null() ? true : (bool)j["UnalignedMode"];
-		scopeFrame = j["scopeFrame"].is_null() ? 1 : (unsigned int)j["scopeFrame"];
-		
-		shaderData.IsCircle = j["ShaderData"]["IsCircle"].is_null() ? true : (bool)j["ShaderData"]["IsCircle"];
-		shaderData.bEnableZMove = j["ShaderData"]["EnableZMove"].is_null() ? true : (bool)j["ShaderData"]["EnableZMove"];
-		shaderData.bCanEnableNV = j["ShaderData"]["EnableNV"].is_null() ? true : (bool)j["ShaderData"]["EnableNV"];
-		shaderData.bBoltDisable = j["ShaderData"]["bBoltDisable"].is_null() ? true : (bool)j["ShaderData"]["bBoltDisable"];
-
-
-		shaderData.baseWeaponPos = j["ShaderData"]["BaseWeaponPos"].is_null() ? 0 : (float)j["ShaderData"]["BaseWeaponPos"];
-		shaderData.movePercentage = j["ShaderData"]["ZMovePercentage"].is_null() ? 0 : (float)j["ShaderData"]["ZMovePercentage"];
-
-		shaderData.camDepth = j["ShaderData"]["CamDepth"].is_null() ? 1 : (float)j["ShaderData"]["CamDepth"];
-		shaderData.nvIntensity = j["ShaderData"]["NVIntensity"].is_null() ? 3 : (float)j["ShaderData"]["NVIntensity"];
-		shaderData.ReticleSize = j["ShaderData"]["ReticleSize"].is_null() ? 4 : (float)j["ShaderData"]["ReticleSize"];
-
-		shaderData.minZoom = j["ShaderData"]["MinZoom"].is_null() ? 1 : (float)j["ShaderData"]["MinZoom"];
-		shaderData.maxZoom = j["ShaderData"]["MaxZoom"].is_null() ? 4 : (float)j["ShaderData"]["MaxZoom"];
-
-		shaderData.Size[0] = j["ShaderData"]["Size"]["x"].is_null() ? 100.0F : (float)j["ShaderData"]["Size"]["x"];
-		shaderData.Size[1] = j["ShaderData"]["Size"]["y"].is_null() ? 100.0F : (float)j["ShaderData"]["Size"]["y"];
-
-		shaderData.OriSize[0] = j["ShaderData"]["OriSize"]["x"].is_null() ? 100.0F : (float)j["ShaderData"]["OriSize"]["x"];
-		shaderData.OriSize[1] = j["ShaderData"]["OriSize"]["y"].is_null() ? 100.0F : (float)j["ShaderData"]["OriSize"]["y"];
-
-		shaderData.PositionOffset[0] = j["ShaderData"]["PositionOffset"]["x"].is_null() ? 0 : (float)j["ShaderData"]["PositionOffset"]["x"];
-		shaderData.PositionOffset[1] = j["ShaderData"]["PositionOffset"]["y"].is_null() ? 0 : (float)j["ShaderData"]["PositionOffset"]["y"];
-
-		shaderData.OriPositionOffset[0] = j["ShaderData"]["OriPositionOffset"]["x"].is_null() ? 0 : (float)j["ShaderData"]["OriPositionOffset"]["x"];
-		shaderData.OriPositionOffset[1] = j["ShaderData"]["OriPositionOffset"]["y"].is_null() ? 0 : (float)j["ShaderData"]["OriPositionOffset"]["y"];
-
-		shaderData.parallax.radius = j["ShaderData"]["Parallax"]["radius"].is_null() ? 2 : (float)j["ShaderData"]["Parallax"]["radius"];
-		shaderData.parallax.relativeFogRadius = j["ShaderData"]["Parallax"]["relativeFogRadius"].is_null() ? 9 : (float)j["ShaderData"]["Parallax"]["relativeFogRadius"];
-		shaderData.parallax.scopeSwayAmount = j["ShaderData"]["Parallax"]["scopeSwayAmount"].is_null() ? 3 : (float)j["ShaderData"]["Parallax"]["scopeSwayAmount"];
-		shaderData.parallax.maxTravel = j["ShaderData"]["Parallax"]["maxTravel"].is_null() ? 0.75F : (float)j["ShaderData"]["Parallax"]["maxTravel"];
-
-
-
-		ScopeData::ScopeDataHandler::GetSingleton()->SetCurrentFTSData(this);
-
-		f.close();
-
-		
-		UpdateFTSData(path);
 	}
 
 	std::vector<std::string_view> splitSV(std::string_view strv, std::string_view delims)
