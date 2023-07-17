@@ -12,6 +12,9 @@
 #include <backends/imgui_impl_dx11.h>
 #include <backends/imgui_impl_win32.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include <dxgi1_4.h>
+
+
 
 #pragma comment(lib, "D3DCompiler.lib")
 #pragma comment(lib, "dwrite.lib")
@@ -39,6 +42,7 @@ float relativeFogRadius_UI;
 float scopeSwayAmount_UI;
 float maxTravel_UI;
 
+bool bEnableFG;
 bool bEnableZMove;
 bool isActive_TAA;
 bool bEnableNVGEffect;
@@ -842,6 +846,7 @@ namespace Hook
 			scopeData.ScopeEffect_OriSize = { currData->shaderData.OriSize[0], currData->shaderData.OriSize[1] };
 			scopeData.ScopeEffect_Size = { currData->shaderData.Size[0], currData->shaderData.Size[1] };
 			scopeData.baseFovAdjustTarget = currData->shaderData.fovAdjust;
+			bLegacyMode = currData->legacyMode;
 
 			vsConstanData.CurrRootPos = gameConstBuffer.rootPos.GetXMFLOAT3();
 			vsConstanData.CurrWeaponPos = gameConstBuffer.weaponPos.GetXMFLOAT3();
@@ -981,7 +986,7 @@ namespace Hook
 			g_Context->CopyResource(m_DstTexture, mRTRenderTargetTexture.Get());
 
 			g_Context->VSSetShader(targetVS.Get(), targetVSClassInstance.GetAddressOf(), targetVSNumClassesInstance);
-			g_Context->PSSetShader(m_outPutPixelShader_Legacy.Get(), nullptr, 0);
+			g_Context->PSSetShader(m_outPutPixelShader.Get(), nullptr, 0);
 			//g_Context->PSSetShader(m_outPutPixelShader.Get(), nullptr, 0);
 			g_Context->PSSetConstantBuffers(4, 1, m_pConstantBufferData.GetAddressOf());
 			g_Context->PSSetConstantBuffers(5, 1, m_pScopeEffectBuffer.GetAddressOf());
@@ -1124,6 +1129,7 @@ namespace Hook
 		return oldFuncs.drawIndexed(pContext, IndexCount, StartIndexLocation, BaseVertexLocation);
 	}
 
+	IDXGISwapChain3* mSwapChain3;
 
 	void D3D::Render()
 	{
@@ -1136,32 +1142,38 @@ namespace Hook
 			{
 				//IDXGISwapChain* mSwapChain = RE::BSGraphics::RendererData::GetSingleton()->renderWindow->swapChain;
 				IDXGISwapChain1* mSwapChain;
+
 				g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain));
+				g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain3));
+
 				HR(g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain)));
-				HR(mSwapChain->GetBuffer(0, IID_PPV_ARGS(&mRealBackBuffer)));
+				
 				HR(g_Swapchain->GetBuffer(0, IID_PPV_ARGS(&mBackBuffer)));
-
 				HR(g_Device->CreateRenderTargetView(mBackBuffer, nullptr, m_pRenderTargetView.GetAddressOf()));
-				HR(g_Device->CreateShaderResourceView(mRealBackBuffer, NULL, mShaderResourceView.GetAddressOf()));
 
-				//mShaderResourceView = RE::BSGraphics::RendererData::GetSingleton()->renderTargets[2].srView;
 
 				bHasGetBackBuffer = true;
 			}
+
+			if (mShaderResourceView)
+				mShaderResourceView.ReleaseAndGetAddressOf();
+
+			UINT backBufferIndex = mSwapChain3->GetCurrentBackBufferIndex();
+			HR(mSwapChain3->GetBuffer(backBufferIndex, IID_PPV_ARGS(&mRealBackBuffer)));
+			HR(g_Device->CreateShaderResourceView(mRealBackBuffer, NULL, mShaderResourceView.GetAddressOf()));
+
+			
 
 			if (isEnableRender && pcam && player)
 			{
 				if (bIsFirst) 
 				{
-
 					OnResize();
 					InitEffect();
 					InitLegacyEffect();
 					InitResource();
 					bIsFirst = false;
 				}
-
-
 
 				auto currData = sdh->GetCurrentFTSData();
 
@@ -1173,7 +1185,7 @@ namespace Hook
 				UpdateScene(currData);
 				instance().GrabScreen();
 
-				if (currData->legacyMode || bLegacyMode)
+				if (bLegacyMode)
 					instance().RenderToReticleTexture();
 				else
 					instance().RenderToReticleTextureNew(targetIndexCount, targetStartIndexLocation, targetBaseVertexLocation);
@@ -1471,15 +1483,7 @@ namespace Hook
 
 			func(This, a2, a3);
 			instance().Render();
-			
 
-			//if (instance().mShaderResourceView)
-			//	instance().mShaderResourceView.ReleaseAndGetAddressOf();
-			/*if (instance().mRTShaderResourceView)
-				instance().mRTShaderResourceView.ReleaseAndGetAddressOf();*/
-			
-
-			
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
 	};
@@ -1513,6 +1517,16 @@ namespace Hook
 		static inline REL::Relocation<decltype(thunk)> func;
 	};
 
+	struct D3D::ImageSpaceEffectMotionBlur
+	{
+		static bool thunk(uint64_t a1,char a2)
+		{
+			_MESSAGE("ImageSpaceEffectMotionBlur, %s", a2);
+			return func(a1,a2);
+		}
+		static inline REL::Relocation<decltype(thunk)> func;
+	};
+
 #pragma endregion
 
 	BOOL __stdcall D3D::ClipCursorHook(RECT* lpRect)
@@ -1540,6 +1554,8 @@ namespace Hook
 		write_vfunc<0x1, ImageSpaceEffectBokehDepthOfField_Render>(RE::VTABLE::ImageSpaceEffectBokehDepthOfField[0].address());
 		write_vfunc<0x8, ImageSpaceEffectTemporalAA_IsActive>(RE::VTABLE::ImageSpaceEffectTemporalAA[0].address());
 		write_vfunc<0x8, ImageSpaceEffectBokehDepthOfField_IsActive>(RE::VTABLE::ImageSpaceEffectBokehDepthOfField[0].address());
+
+		write_vfunc<0x8, ImageSpaceEffectBokehDepthOfField_IsActive>(RE::VTABLE::ImageSpaceEffectMotionBlur[0].address());
 
 		return true;
 	}
@@ -1584,14 +1600,7 @@ namespace Hook
 
 		//won't work without a modified dxgi.dll or d3d11.dll
 		HookFunc(vtbl, 12, (std::uintptr_t)DrawIndexedHook, (std::uintptr_t*)&oldFuncs.drawIndexed);
-		//HookFunc(vtbl, 7, (std::uintptr_t)vsSetConstantBuffers, (std::uintptr_t*)&oldFuncs.vsSetConstantBuffers);
 
-		/*IDXGISwapChain* mSwapChain;
-		HR(g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain)));
-		DXGI_SWAP_CHAIN_DESC sd;
-		mSwapChain->GetDesc(&sd);*/
-		
-		
 		RECT rect;
 		auto window = GetActiveWindow();
 
@@ -1601,16 +1610,10 @@ namespace Hook
 		DXGI_SWAP_CHAIN_DESC sd;
 		mSwapChain->GetDesc(&sd);
 
-
-
 		oldFuncs.wndProc = (WNDPROC)GetWindowLongPtr(window, GWLP_WNDPROC);
 		SetWindowLongPtr(sd.OutputWindow, GWLP_WNDPROC, (LONG_PTR)WndProcHandler);
-		::GetWindowRect(sd.OutputWindow, &oldRect);
 
-		if (GetWindowRect(sd.OutputWindow, &rect)) {
-			windowWidth = rect.right - rect.left;
-			windowHeight = rect.bottom - rect.top;
-		}
+		::GetWindowRect((HWND)RE::BSGraphics::RendererData::GetSingleton()->renderWindow->hwnd, &oldRect);
 
 		windowWidth =  RE::BSGraphics::RendererData::GetSingleton()->renderWindow->windowWidth;
 		windowHeight = RE::BSGraphics::RendererData::GetSingleton()->renderWindow->windowHeight;
@@ -1622,7 +1625,7 @@ namespace Hook
 		ImGui::StyleColorsDark();
 
 		IMGUI_CHECKVERSION();
-		ImGui_ImplWin32_Init(sd.OutputWindow);
+		ImGui_ImplWin32_Init(RE::BSGraphics::RendererData::GetSingleton()->renderWindow->hwnd);
 		ImGui_ImplDX11_Init((g_Device.Get()), (g_Context.Get()));
 
 

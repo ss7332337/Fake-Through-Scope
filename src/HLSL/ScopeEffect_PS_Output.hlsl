@@ -29,15 +29,15 @@ float4 main(float4 position : SV_Position ,float2 texcoord : TEXCOORD0) : SV_Tar
 
 	bool isRender = isCircle ? (dx * dx + dy * dy < r * r) : (pos.x >= destTopLeft.x && pos.y >= destTopLeft.y && pos.x <= destBottomRight.x && pos.y <= destBottomRight.y);
 
-    if(abs(pos.x - FTS_ScreenPos.x) < 1.1 || abs(pos.y - FTS_ScreenPos.y)<1.1)
-    {
-        return float4(0,1,1,1);
-    }
+    // if(abs(pos.x - FTS_ScreenPos.x) < 1.1 || abs(pos.y - FTS_ScreenPos.y)<1.1)
+    // {
+    //     return float4(0,1,1,1);
+    // }
 
-    if(abs(texcoord.x - 0.5) < 0.001 || abs(texcoord.y - 0.5)<0.001)
-    {
-        return float4(1,0,0,1);
-    }
+    // if(abs(texcoord.x - 0.5) < 0.001 || abs(texcoord.y - 0.5)<0.001)
+    // {
+    //     return float4(1,0,0,1);
+    // }
 
 
     return color * isRender * EnableMerge;

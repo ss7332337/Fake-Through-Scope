@@ -532,12 +532,14 @@ void HookedUpdate()
 			//CursorMenu
 
 			if (IsSideAim() || RE::UI::GetSingleton()->GetMenuOpen("PauseMenu") || RE::UI::GetSingleton()->GetMenuOpen("WorkshopMenu") 
-				//|| RE::UI::GetSingleton()->GetMenuOpen("CursorMenu")
-				) {
+				|| RE::UI::GetSingleton()->GetMenuOpen("CursorMenu")
+				) 
+			{
 				hookIns->EnableRender(false);
 				hookIns->QueryRender(false);
 			} 
-			else {
+			else 
+			{
 				if (IsInADS(player)) 
 				{
 					hookIns->EnableRender(true);
@@ -848,6 +850,11 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a
 
 extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Load(const F4SE::LoadInterface* a_f4se)
 {
+
+	//while (!IsDebuggerPresent()) {
+	//	Sleep(100);
+	//}
+
 	F4SE::Init(a_f4se);
 
 	F4SE::Trampoline& trampoline = F4SE::GetTrampoline();

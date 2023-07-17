@@ -59,7 +59,7 @@ cbuffer ScopeEffectData : register(b5)
 	float3 CurrRootPos;
 	float padding5 = 0;
 
-	row_major float4x4 CameraRotation; 
+	float4x4 CameraRotation; 
 
 	float2 FTS_ScreenPos;
 	float2 sd_padding6;

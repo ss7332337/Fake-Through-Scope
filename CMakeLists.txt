@@ -90,9 +90,6 @@ if (NOT TARGET ImGui186)
 	add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../imgui-1.86" ImGui186)
 endif ()
 
-#if (NOT TARGET DirectXTK12)
-#	add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../DirectXTK12" DirectXTK12)
-#endif ()
 
 find_package(spdlog REQUIRED CONFIG)
 
@@ -100,13 +97,6 @@ find_package(spdlog REQUIRED CONFIG)
 
 include(cmake/sourcelist.cmake)
 
-#source_group(
-#	TREE ${CMAKE_CURRENT_SOURCE_DIR}
-#	FILES ${SOURCES},
-#	src/HLSL/ScopeEffect_PS.hlsl,
-#	src/HLSL/ScopeEffect_VS.hlsl
-#
-#)
 
 source_group(
 	TREE ${CMAKE_CURRENT_BINARY_DIR}

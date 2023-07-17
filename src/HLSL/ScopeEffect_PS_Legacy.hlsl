@@ -2,7 +2,7 @@
 
 sampler BackBuffer;
 
-float4 main(float4 vpos : SV_Position, float2 texcoord : TEXCOORD0) : SV_Target 
+float4 mainq(float4 vpos : SV_Position, float2 texcoord : TEXCOORD0) : SV_Target 
 {
 	float2 pos = vpos.xy;
 
@@ -21,7 +21,7 @@ float4 main(float4 vpos : SV_Position, float2 texcoord : TEXCOORD0) : SV_Target
 	return float4(0,1,1,1) * isRender;
 }
 
-float4 mainq(float4 vpos : SV_Position, float2 texcoord : TEXCOORD0) : SV_Target 
+float4 main(float4 vpos : SV_Position, float2 texcoord : TEXCOORD0) : SV_Target 
 {
 	float2 pos = texcoord / PixelSize;
 
