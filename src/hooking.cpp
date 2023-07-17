@@ -435,7 +435,7 @@ namespace Hook
 
 		auto worldSpacePoint = camRot * (objTrans - camTrans);
 
-		XMMATRIX projectionMatrix = GetProjectionMatrix(pcam->firstPersonFOV + pcam->fovAdjustTarget);
+		XMMATRIX projectionMatrix = GetProjectionMatrix(fov);
 
 		XMVECTOR clipPosition = XMVectorSet(worldSpacePoint.x, worldSpacePoint.y, worldSpacePoint.z, 1.0f);
 		clipPosition = XMVector4Transform(clipPosition, projectionMatrix);  // Apply projection matrix
@@ -1341,11 +1341,20 @@ namespace Hook
 					ImGui::DragFloat("Min Zoom", &minZoom_UI, 0.01F, 0, 15);
 					ImGui::DragFloat("Max Zoom", &maxZoom_UI, 0.01F, 0, 15);
 					ImGui::NewLine();
-					ImGui::DragFloat2("Dest Pos Offset", PositionOffset_UI, 0.1F, -3840, 3840);
+					if (bLegacyMode)
+						ImGui::DragFloat2("Dest Pos Offset", PositionOffset_UI, 0.1F, -3840, 3840);
+					else
+						ImGui::DragFloat2("Dest Pos Offset", PositionOffset_UI, 0.001F, -5, 5);
+
 					ImGui::DragFloat2("Dest Scope Size", Size_UI, 0.1F, 0, 3840);
 					ImGui::NewLine();
-					ImGui::DragFloat2("Ori Pos Offset", OriPositionOffset_UI, 0.1F, -3840, 3840);
-					ImGui::DragFloat2("Ori Scope Size", OriSize_UI, 0.1F, 0, 3840);
+
+					if (bLegacyMode)
+						ImGui::DragFloat2("Ori Pos Offset", OriPositionOffset_UI, 0.1F, -3840, 3840);
+					else
+						ImGui::DragFloat2("Ori Pos Offset", OriPositionOffset_UI, 0.001F, -5, 5);
+
+					//ImGui::DragFloat2("Ori Scope Size", OriSize_UI, 0.1F, 0, 3840);
 					ImGui::NewLine();
 
 					ImGui::Checkbox("Enable Night Vision", &bEnableNVGEffect);
@@ -1369,7 +1378,7 @@ namespace Hook
 					currData->UsingSTS = UsingSTS_UI;
 					currData->scopeFrame = scopeFrame_UI;
 					currData->shaderData.IsCircle = IsCircle_UI;
-					_MESSAGE("currData->shaderData.bCanEnableNV: %i, bEnableNVGEffect: %i", currData->shaderData.bCanEnableNV, bEnableNVGEffect);
+					//_MESSAGE("currData->shaderData.bCanEnableNV: %i, bEnableNVGEffect: %i", currData->shaderData.bCanEnableNV, bEnableNVGEffect);
 					currData->shaderData.bCanEnableNV = bEnableNVGEffect;
 					currData->shaderData.baseWeaponPos = baseWeaponPos_UI;
 					currData->shaderData.bEnableZMove = bEnableZMove;
@@ -1555,7 +1564,7 @@ namespace Hook
 		write_vfunc<0x8, ImageSpaceEffectTemporalAA_IsActive>(RE::VTABLE::ImageSpaceEffectTemporalAA[0].address());
 		write_vfunc<0x8, ImageSpaceEffectBokehDepthOfField_IsActive>(RE::VTABLE::ImageSpaceEffectBokehDepthOfField[0].address());
 
-		write_vfunc<0x8, ImageSpaceEffectBokehDepthOfField_IsActive>(RE::VTABLE::ImageSpaceEffectMotionBlur[0].address());
+		//write_vfunc<0x8, ImageSpaceEffectBokehDepthOfField_IsActive>(RE::VTABLE::ImageSpaceEffectMotionBlur[0].address());
 
 		return true;
 	}

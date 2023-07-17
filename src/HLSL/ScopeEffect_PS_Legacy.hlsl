@@ -35,12 +35,12 @@ float4 main(float4 vpos : SV_Position, float2 texcoord : TEXCOORD0) : SV_Target
 	float4 color = tBACKBUFFER.Sample(gSamLinear, texcoord);
 	float2 corrected_texturecoords = aspect_ratio_correction(texcoord);
 	float2 texcoordCorrected = corrected_texturecoords;
-	float4 ViewDir = normalize(mul(CameraRotation,float4(eyeDirection,1)));
+	float4 ViewDir = normalize(mul(float4(eyeDirection,1),CameraRotation));
 
 	float2 ScopeOffset = ViewDir.xy;
 	ScopeOffset *= rcp(camDepth);
 	ScopeOffset.y *= -AspectRatio;
-	float4 abseyeDirectionLerp = mul(CameraRotation,float4(eyeDirectionLerp,1));
+	float4 abseyeDirectionLerp = mul(float4(eyeDirectionLerp,1),CameraRotation);
 	if (abseyeDirectionLerp.y < 0 && abseyeDirectionLerp.y >= -0.001)
 		abseyeDirectionLerp.y = -0.001;
 	else if (abseyeDirectionLerp.y >= 0 && abseyeDirectionLerp.y <= 0.001)

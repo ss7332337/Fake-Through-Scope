@@ -159,7 +159,7 @@ float4 NVGEffect(float4 color, float2 texcoord)
 
 float GetLengthDiff(float length)
 {
-	return (length * tan(radians((GameFov)/2))) / tan(radians((90)/2)) ;
+	return (length * tan(radians(GameFov/2))) / tan(radians(90/2)) ;
 }
 
 float2 GetCoordDiff(float2 coord)
@@ -170,4 +170,16 @@ float2 GetCoordDiff(float2 coord)
 float3 GetCoordDiff(float3 coord)
 {
 	return float3(GetLengthDiff(coord.x), GetLengthDiff(coord.y),GetLengthDiff(coord.z));
+}
+
+//useless
+float2 GetTexOffsetDiff(float2 offset_t)
+{
+	float2 offset_s = offset_t * 2 - 1;
+	float aspect = BUFFER_WIDTH / BUFFER_HEIGHT;
+	float FOV1_y = 2 * atan(tan(radians(GameFov/2)) / aspect);
+	float FOV2_y = 2 * atan(tan(radians(90/2)) / aspect);
+	float2 offset2_s = (offset_s * tan(radians(FOV2_y/2))) / tan(radians(FOV1_y/2));
+	float2 offset2_t = (offset2_s + 1) / 2;
+	return offset2_t;
 }

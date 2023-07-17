@@ -461,8 +461,12 @@ void HookedUpdate()
 		if (scopeNode && camNode) 
 		{
 			tempOut = hookIns->WorldToScreen(camNode, scopeNode, PlayerCamera::GetSingleton()->firstPersonFOV);
-			_MESSAGE("tempOut: %f, %f, %f", tempOut.x, tempOut.y, tempOut.z);
+			
+			//_MESSAGE("tempOut: %f, %f, %f", tempOut.x, tempOut.y, tempOut.z);
 		}
+
+
+		pcam = PlayerCamera::GetSingleton();
 
 		_MESSAGE("\nfovAdjustCurrent: %f; fovAdjustTarget: %f; firstPersonFOV: %f; worldFOV: %f; fovAnimatorAdjust: %f",
 			pcam->fovAdjustCurrent, pcam->fovAdjustTarget, pcam->firstPersonFOV, pcam->worldFOV, pcam->fovAnimatorAdjust);
@@ -521,7 +525,7 @@ void HookedUpdate()
 			}
 
 
-			_MESSAGE("%f", RE::UI::GetSingleton()->uiTimer.delta);
+			//_MESSAGE("%f", RE::UI::GetSingleton()->uiTimer.delta);
 			
 
 			hookIns->SetGameConstData(gcb);
