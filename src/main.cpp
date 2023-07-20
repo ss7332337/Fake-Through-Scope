@@ -166,28 +166,28 @@ bool IsSideAim()
 	if (player) 
 	{
 		if (an_45) {
-			temp = player->HasKeyword(an_45, reinterpret_cast<RE::TBO_InstanceData*>(player));
+			temp |= player->HasKeyword(an_45);
 		}
-		else if (AnimsXM2010_scopeKH45) {
-			temp = player->HasKeyword(AnimsXM2010_scopeKH45, reinterpret_cast<RE::TBO_InstanceData*>(player));
+		if (AnimsXM2010_scopeKH45) {
+			temp |= player->HasKeyword(AnimsXM2010_scopeKH45);
 		}
-		else if (AnimsXM2010_scopeKM) {
-			temp = player->HasKeyword(AnimsXM2010_scopeKM, reinterpret_cast<RE::TBO_InstanceData*>(player));
+		if (AnimsXM2010_scopeKM) {
+			temp |= player->HasKeyword(AnimsXM2010_scopeKM);
 		} 
-		else if (AnimsAX50_scopeKH45) {
-			temp = player->HasKeyword(AnimsAX50_scopeKH45, reinterpret_cast<RE::TBO_InstanceData*>(player));
+		if (AnimsAX50_scopeKH45) {
+			temp |= player->HasKeyword(AnimsAX50_scopeKH45);
 		} 
-		else if (Tull_SideAimKeyword) {
-			temp = player->HasKeyword(Tull_SideAimKeyword, reinterpret_cast<RE::TBO_InstanceData*>(player));
+		if (Tull_SideAimKeyword) {
+			temp |= player->HasKeyword(Tull_SideAimKeyword);
 		} 
-		else if (AX50_toounScope_K) {
-			temp = player->HasKeyword(AX50_toounScope_K, reinterpret_cast<RE::TBO_InstanceData*>(player));
+		if (AX50_toounScope_K) {
+			temp |= player->HasKeyword(AX50_toounScope_K);
 		}
-		else if (AX50_toounScope_L) {
-			temp = player->HasKeyword(AX50_toounScope_L, reinterpret_cast<RE::TBO_InstanceData*>(player));
+		if (AX50_toounScope_L) {
+			temp |= player->HasKeyword(AX50_toounScope_L);
 		}
-		else if (AnimsAX50_scopeK) {
-			temp = player->HasKeyword(AnimsAX50_scopeK, reinterpret_cast<RE::TBO_InstanceData*>(player));
+		if (AnimsAX50_scopeK) {
+			temp |= player->HasKeyword(AnimsAX50_scopeK);
 		}
 	}
 	return temp;
@@ -198,16 +198,16 @@ BGSKeyword* IsMagnifier()
 
 	if (player) {
 		if (QMW_AnimsQBZ191M_on) {
-			if (player->HasKeyword(QMW_AnimsQBZ191M_on, reinterpret_cast<RE::TBO_InstanceData*>(player)))
+			if (player->HasKeyword(QMW_AnimsQBZ191M_on))
 				return QMW_AnimsQBZ191M_on;
 		} else if (QMW_AnimsQBZ191M_off) {
-			if (player->HasKeyword(QMW_AnimsQBZ191M_off, reinterpret_cast<RE::TBO_InstanceData*>(player)))
+			if (player->HasKeyword(QMW_AnimsQBZ191M_off))
 				return QMW_AnimsQBZ191M_off;
 		} else if (QMW_AnimsRU556M_off) {
-			if (player->HasKeyword(QMW_AnimsRU556M_off, reinterpret_cast<RE::TBO_InstanceData*>(player)))
+			if (player->HasKeyword(QMW_AnimsRU556M_off))
 				return QMW_AnimsRU556M_off;
 		} else if (QMW_AnimsRU556M_on) {
-			if (player->HasKeyword(QMW_AnimsRU556M_on, reinterpret_cast<RE::TBO_InstanceData*>(player)))
+			if (player->HasKeyword(QMW_AnimsRU556M_on))
 				return QMW_AnimsRU556M_on;
 		}
 	}
@@ -444,6 +444,18 @@ void HandleScopeNode()
 
 bool isUpdateContext = false;
 
+namespace F4
+{
+	void ApplyImageSpaceModifier(TESImageSpaceModifier* imod, float strength, NiAVObject* target)
+	{
+		using func_t = decltype(&F4::ApplyImageSpaceModifier);
+		REL::Relocation<func_t> func{ REL::ID(179769) };
+		return func(imod, strength, target);
+	}
+}
+
+float timerA = 0;
+
 void HookedUpdate()
 {
 	if (InGameFlag&& player && player->Get3D(true)) {
@@ -456,7 +468,7 @@ void HookedUpdate()
 		//MenuCursor::GetSingleton()->CenterCursor();
 		
 		//_MESSAGE("Menu: %s", UI::GetSingleton()->menuStack[0]->menuName.c_str());
-
+		//_MESSAGE("REL::ID(179769): %i", REL::ID(179769).offset());
 		NiPoint3 tempOut;
 		if (scopeNode && camNode) 
 		{
@@ -465,11 +477,18 @@ void HookedUpdate()
 			//_MESSAGE("tempOut: %f, %f, %f", tempOut.x, tempOut.y, tempOut.z);
 		}
 
+		/*if ((timerA += *ptr_deltaTime) > 1) {
+			auto imod = (TESImageSpaceModifier*)GetFormFromMod(std::string("SimpleImpact.esp"), 0x807);
+			F4::ApplyImageSpaceModifier(imod, 0.5F, nullptr);
+			timerA = 0;
+		}*/
 
 		pcam = PlayerCamera::GetSingleton();
 
-		_MESSAGE("\nfovAdjustCurrent: %f; fovAdjustTarget: %f; firstPersonFOV: %f; worldFOV: %f; fovAnimatorAdjust: %f",
-			pcam->fovAdjustCurrent, pcam->fovAdjustTarget, pcam->firstPersonFOV, pcam->worldFOV, pcam->fovAnimatorAdjust);
+		
+
+		//_MESSAGE("\nfovAdjustCurrent: %f; fovAdjustTarget: %f; firstPersonFOV: %f; worldFOV: %f; fovAnimatorAdjust: %f",
+			//pcam->fovAdjustCurrent, pcam->fovAdjustTarget, pcam->firstPersonFOV, pcam->worldFOV, pcam->fovAnimatorAdjust);
 		
 		
 		NiPointer<bhkCharacterController> con = player->currentProcess->middleHigh->charController;
@@ -526,8 +545,9 @@ void HookedUpdate()
 
 
 			//_MESSAGE("%f", RE::UI::GetSingleton()->uiTimer.delta);
-			
-
+			/*TESImageSpaceModifier* imod;
+			imod = (TESImageSpaceModifier*)GetFormFromMod(std::string("SimpleImpact.esp"), 0x807);
+			F4::ApplyImageSpaceModifier(imod, 0.5F, nullptr);*/
 			hookIns->SetGameConstData(gcb);
 			HandleScopeNode();
 
@@ -535,7 +555,8 @@ void HookedUpdate()
 			//WorkshopMenu
 			//CursorMenu
 
-			if (IsSideAim() || RE::UI::GetSingleton()->GetMenuOpen("PauseMenu") || RE::UI::GetSingleton()->GetMenuOpen("WorkshopMenu") 
+			if (IsSideAim() 
+				|| RE::UI::GetSingleton()->GetMenuOpen("PauseMenu") || RE::UI::GetSingleton()->GetMenuOpen("WorkshopMenu") 
 				|| RE::UI::GetSingleton()->GetMenuOpen("CursorMenu")
 				) 
 			{
@@ -856,7 +877,7 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Load(const F4SE::LoadInterface* a_f
 {
 
 	//while (!IsDebuggerPresent()) {
-	//	Sleep(100);
+	//	//Sleep(100);
 	//}
 
 	F4SE::Init(a_f4se);

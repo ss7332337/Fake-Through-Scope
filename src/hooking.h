@@ -405,6 +405,9 @@ namespace Hook
 		struct ImageSpaceEffectBokehDepthOfField_Render;
 		struct ImageSpaceEffectBokehDepthOfField_IsActive;
 		struct ImageSpaceEffectMotionBlur;
+		struct ImageSpaceEffectMotionBlur1;
+		struct ImageSpaceEffectMotionBlur2;
+		struct ImageSpaceEffectMotionBlur3;
 
 		struct OldFuncs
 		{
