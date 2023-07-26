@@ -59,6 +59,10 @@ namespace ScopeData
 
 			j["ShaderData"]["Size"]["x"] = currentData->shaderData.Size[0];
 			j["ShaderData"]["Size"]["y"] = currentData->shaderData.Size[1];
+			j["ShaderData"]["rectSize"]["x"] = currentData->shaderData.rectSize[0];
+			j["ShaderData"]["rectSize"]["y"] = currentData->shaderData.rectSize[1];
+			j["ShaderData"]["rectSize"]["z"] = currentData->shaderData.rectSize[2];
+			j["ShaderData"]["rectSize"]["w"] = currentData->shaderData.rectSize[3];
 
 			j["ShaderData"]["OriSize"]["x"] = currentData->shaderData.OriSize[0];
 			j["ShaderData"]["OriSize"]["y"] = currentData->shaderData.OriSize[1];
@@ -111,6 +115,11 @@ namespace ScopeData
 
 		shaderData.Size[0] = j["ShaderData"]["Size"]["x"].is_null() ? 100.0F : (float)j["ShaderData"]["Size"]["x"];
 		shaderData.Size[1] = j["ShaderData"]["Size"]["y"].is_null() ? 100.0F : (float)j["ShaderData"]["Size"]["y"];
+
+		shaderData.rectSize[0] = j["ShaderData"]["rectSize"]["x"].is_null() ? 0.15F : (float)j["ShaderData"]["rectSize"]["x"];
+		shaderData.rectSize[1] = j["ShaderData"]["rectSize"]["y"].is_null() ? 0.3F : (float)j["ShaderData"]["rectSize"]["y"];
+		shaderData.rectSize[2] = j["ShaderData"]["rectSize"]["z"].is_null() ? 0.75F : (float)j["ShaderData"]["rectSize"]["z"];
+		shaderData.rectSize[3] = j["ShaderData"]["rectSize"]["w"].is_null() ? 0.75F : (float)j["ShaderData"]["rectSize"]["w"];
 
 		shaderData.OriSize[0] = j["ShaderData"]["OriSize"]["x"].is_null() ? 100.0F : (float)j["ShaderData"]["OriSize"]["x"];
 		shaderData.OriSize[1] = j["ShaderData"]["OriSize"]["y"].is_null() ? 100.0F : (float)j["ShaderData"]["OriSize"]["y"];
@@ -165,7 +174,9 @@ namespace ScopeData
 			return false;
 
 		FTSData* tempdata = new FTSData(data, path);
+
 		ScopeDataMap.emplace(tempdata->keywordName.data(), tempdata);
+
 		//try {
 		//	
 		//} catch (nlohmann::detail::exception& e) {
@@ -427,6 +438,7 @@ namespace ScopeData
 	{
 		return &ScopeDataMap;
 	}
+
 
 	void ScopeDataHandler::UpdateFTSData(std::string path)
 	{

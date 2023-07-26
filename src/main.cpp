@@ -4,6 +4,7 @@
 #include <hooking.h>
 #include <DirectXMath.h>
 #include <d3d11_1.h>
+#include "ImGuiImpl.h"
 
 using namespace RE;
 using namespace BSScript;
@@ -135,7 +136,7 @@ void WorldToScreen_Internal(RE::NiPoint3* in, RE::NiPoint3* out)
 DWORD StartHooking(LPVOID)
 {
 	
-	hookIns = &Hook::D3D::instance();
+	hookIns = Hook::D3D::GetSington();
 	Hook::D3D::Register();
 	return 0;
 }
@@ -209,74 +210,71 @@ BGSKeyword* IsMagnifier()
 		} else if (QMW_AnimsRU556M_on) {
 			if (player->HasKeyword(QMW_AnimsRU556M_on))
 				return QMW_AnimsRU556M_on;
-		}
+		} 
 	}
 	return nullptr;
 }
 
-inline void InitCurrentScopeData(BGSKeyword* animFlavorKeyword)
+inline void InitCurrentScopeData()
 {
 	if (player->currentProcess) {
-		//_MESSAGE("Equipping Process!!!");
-		BSTArray<EquippedItem>& eventEquipped = player->currentProcess->middleHigh->equippedItems;
+		auto& eventEquipped = player->currentProcess->middleHigh->equippedItems;
 
 		if (eventEquipped.size() > 0 && eventEquipped[0].item.instanceData &&
 			((TESObjectWEAP::InstanceData*)eventEquipped[0].item.instanceData.get())->type == WEAPON_TYPE::kGun) {
-			//_MESSAGE("Equipping EveryThing Done!!!");
 			TESObjectWEAP* eventWep = ((TESObjectWEAP*)eventEquipped[0].item.object);
 			TESObjectWEAP::InstanceData* eventInstance = (TESObjectWEAP::InstanceData*)eventEquipped[0].item.instanceData.get();
 
-			if (!eventInstance || !eventInstance->GetKeywordData())
+			if (!eventInstance || !eventInstance->GetKeywordData()) {
+				sdh->SetCurrentFTSData(nullptr);
 				return;
-
-			BSScrapArray<const BGSKeyword*> playerkeywords;
-			player->CollectAllKeywords(playerkeywords, reinterpret_cast<TBO_InstanceData*>(player));
-
-			for (uint32_t i = 0; i < eventInstance->GetKeywordData()->numKeywords; i++) {
-				std::string_view tempKeywordEditorID = eventInstance->GetKeywordData()->keywords[i]->formEditorID.c_str();
-
-				if (tempKeywordEditorID.starts_with("FTS_")) {
-					if (playerkeywords.size() > 0) {
-
-						size_t len = sdh->GetScopeDataMap()->count(tempKeywordEditorID.data());
-
-						if (len == 0)
-							return;
-
-						std::map<std::string, ScopeData::FTSData*>::iterator it = sdh->GetScopeDataMap()->find(tempKeywordEditorID.data());
-
-						if (len > 0) {
-
-							if (animFlavorKeyword) {
-								for (size_t kk = 0; kk < len; ++kk, ++it) {
-									for (auto j : playerkeywords) {
-										if (j == animFlavorKeyword) {
-											sdh->SetCurrentFTSData(it->second);
-											//reshadeImpl->UpdateTexture();
-											return;
-										}
-									}
-								}
-							}
-
-							it = sdh->GetScopeDataMap()->find(tempKeywordEditorID.data());
-
-							for (size_t kk = 0; kk < len; ++kk, ++it) {
-								string animKeyword = it->second->animFlavorEditorID;
-
-								if (animKeyword.compare("FTS_NONE") == 0 || animKeyword.compare("")== 0) {
-									sdh->SetCurrentFTSData(it->second);
-									//reshadeImpl->UpdateTexture();
-									return;
-								}
-							}
-						}
-					}
-				}
 			}
 
+			BSScrapArray<const BGSKeyword*> playerkeywords;
+			BSScrapArray<const BGSKeyword*> weaponKeywords;
+			player->CollectAllKeywords(playerkeywords, nullptr);
+			eventInstance->keywords->CollectAllKeywords(weaponKeywords, nullptr);
+
+			string ftsPrefix = "FTS_";
+
+			auto result = std::find_if(weaponKeywords.begin(), weaponKeywords.end(), [&ftsPrefix](const BGSKeyword* p) {
+				_MESSAGE("%s", p->formEditorID.c_str());
+				return !std::strncmp(p->formEditorID.c_str(), ftsPrefix.c_str(), ftsPrefix.length());
+			});
+
+			if (result == weaponKeywords.end()) {
+				sdh->SetCurrentFTSData(nullptr);
+				return;
+			}
+
+			auto ScopeDataMap = sdh->GetScopeDataMap();
+
+			auto it = ScopeDataMap->find((*result)->formEditorID.c_str());  // 返回一个迭代器
+
+			if (it != ScopeDataMap->end()) {
+				auto ftsData = it->second;
+				auto qbzAni = IsMagnifier();
+
+				auto animFlavorKeyword = qbzAni ? std::string(qbzAni->formEditorID.c_str()) : std::string(it->second->animFlavorEditorID.c_str());
+
+				if (animFlavorKeyword.empty() || std::strcmp(animFlavorKeyword.c_str(), "FTS_NONE") == 0) {
+					sdh->SetCurrentFTSData(ftsData);
+					return;
+				} else {
+
+					auto aniResult = std::find_if(playerkeywords.begin(), playerkeywords.end(), [&animFlavorKeyword](const BGSKeyword* p) {
+						return !std::strcmp(p->formEditorID.c_str(), animFlavorKeyword.c_str());
+					});
+
+					if (aniResult != playerkeywords.end())
+						sdh->SetCurrentFTSData(ftsData);
+					else
+						sdh->SetCurrentFTSData(nullptr);
+				}
+			}
+		} 
+		else
 			sdh->SetCurrentFTSData(nullptr);
-		}
 	}
 }
 
@@ -477,12 +475,6 @@ void HookedUpdate()
 			//_MESSAGE("tempOut: %f, %f, %f", tempOut.x, tempOut.y, tempOut.z);
 		}
 
-		/*if ((timerA += *ptr_deltaTime) > 1) {
-			auto imod = (TESImageSpaceModifier*)GetFormFromMod(std::string("SimpleImpact.esp"), 0x807);
-			F4::ApplyImageSpaceModifier(imod, 0.5F, nullptr);
-			timerA = 0;
-		}*/
-
 		pcam = PlayerCamera::GetSingleton();
 
 		
@@ -499,10 +491,13 @@ void HookedUpdate()
 		if (scopeNode && camNode && rootNode) 
 		{
 			currPosition = charProxyTransform->m_translation;
-			NiPoint4 VirTransLerp = { currPosition.pt[0] - lastPosition.pt[0], 
+			NiPoint4 VirTransLerp = 
+			{	
+				currPosition.pt[0] - lastPosition.pt[0], 
 				currPosition.pt[1] - lastPosition.pt[1],
 				currPosition.pt[2] - lastPosition.pt[2],
-				currPosition.pt[3] - lastPosition.pt[3]                                                           };
+				currPosition.pt[3] - lastPosition.pt[3]                                                           
+			};
 			lastPosition = currPosition;
 
 			NiPoint3 virDir = scopeNode->world.translate - camNode->world.translate;
@@ -543,11 +538,6 @@ void HookedUpdate()
 				scopeTimer = 0;
 			}
 
-
-			//_MESSAGE("%f", RE::UI::GetSingleton()->uiTimer.delta);
-			/*TESImageSpaceModifier* imod;
-			imod = (TESImageSpaceModifier*)GetFormFromMod(std::string("SimpleImpact.esp"), 0x807);
-			F4::ApplyImageSpaceModifier(imod, 0.5F, nullptr);*/
 			hookIns->SetGameConstData(gcb);
 			HandleScopeNode();
 
@@ -612,7 +602,7 @@ public:
 			if (evn.isEquip && item && item->formType == ENUM_FORM_ID::kWEAP) {
 				hookIns->QueryRender(false);
 				sdh->SetCurrentFTSData(nullptr);
-				InitCurrentScopeData(nullptr);
+				InitCurrentScopeData();
 				hookIns->SetInterfaceTextRefresh(true);
 				bChangeAnimFlag = false;
 				hookIns->QueryChangeReticleTexture();
@@ -643,19 +633,10 @@ public:
 
 		if (IsInADS(player)) {
 
-			BGSKeyword* magKeyword = IsMagnifier();
-			if (magKeyword != nullptr) {
-				bChangeAnimFlag = true;
-				ChangeAnimFlavorKeyword = magKeyword;
-			}
-
 			if (!IsSideAim() && !player->IsInThirdPerson() && bNeedToUpdateFTSData) {
 
 				if (bChangeAnimFlag) {
-					InitCurrentScopeData(ChangeAnimFlavorKeyword);
-					bChangeAnimFlag = false;
-				} else {
-					InitCurrentScopeData(nullptr);
+					InitCurrentScopeData();
 				}
 
 				currentData = sdh->GetCurrentFTSData();
@@ -798,7 +779,7 @@ void InitializePlugin()
 void ResetScopeStatus()
 {
 	hookIns->InitPlayerData(player, pcam);
-	InitCurrentScopeData(nullptr);
+	InitCurrentScopeData();
 	hookIns->SetScopeEffect(false);
 	hookIns->QueryChangeReticleTexture();
 	if (sdh->GetCurrentFTSData()) {
@@ -807,6 +788,7 @@ void ResetScopeStatus()
 
 	InGameFlag = true;
 	hookIns->SetIsInGame(InGameFlag);
+	hookIns->SetInterfaceTextRefresh(true);
 }
 
 
@@ -814,6 +796,9 @@ void ResetScopeStatus()
 
 extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a_f4se, F4SE::PluginInfo* a_info)
 {
+	/*while (!IsDebuggerPresent()) {
+	}*/
+
 #ifndef NDEBUG
 	auto sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
 #else
@@ -855,7 +840,15 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a
 		return false;
 	}
 
-	HANDLE hThread = CreateThread(NULL, 0, StartHooking, (HMODULE)F4SE::WinAPI::GetCurrentModule(), 0, NULL);
+	hookIns = Hook::D3D::GetSington();
+	Hook::D3D::Register();
+
+	logger::info(FMT_STRING("{} v0.9.0"), Version::PROJECT);
+	//HANDLE hThread = CreateThread(NULL, 0, StartHooking, (HMODULE)F4SE::WinAPI::GetCurrentModule(), 0, NULL);
+
+	/*hookIns = &Hook::D3D::GetSington();
+	Hook::D3D::Register();*/
+
 	/*if (!isUpdateContext) {
 		auto rendererData = BSGraphics::RendererData::GetSingleton();
 		auto device0 = rendererData->device;
@@ -875,10 +868,6 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a
 
 extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Load(const F4SE::LoadInterface* a_f4se)
 {
-
-	//while (!IsDebuggerPresent()) {
-	//	//Sleep(100);
-	//}
 
 	F4SE::Init(a_f4se);
 

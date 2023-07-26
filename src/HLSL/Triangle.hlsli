@@ -65,6 +65,8 @@ cbuffer ScopeEffectData : register(b5)
 	float2 sd_padding6;
 	
 	row_major float4x4 projMat;
+
+	float4 ScopeEffect_Rect;
 	
 };
 

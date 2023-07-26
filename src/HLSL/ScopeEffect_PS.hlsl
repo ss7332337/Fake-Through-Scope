@@ -31,6 +31,8 @@ float4 main(float4 vpos : SV_Position, float2 texcoord : TEXCOORD0) : SV_Target
 	float4 ReticleColor = ReticleTex.Sample(gSamLinear,ReticleCoord);
 	color = ReticleColor * ReticleColor.a + color * (1-ReticleColor.a);
 
+	float4 nColor = EnableNV * NVGEffect(color, texcoord);
+	color = nColor * nColor.a + color * (1 - nColor.a);
 	color.rgb *=   (step(distToCenter, 2) * getparallax(distToParallax,float2(1,1),1));
 	float4 colorFinal = color;
 	// // * isRender;

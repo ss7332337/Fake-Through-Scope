@@ -6,7 +6,7 @@
 //
 // Note: Assumes application has already called CoInitializeEx
 //
-// Warning: CreateWICTexture* functions are not thread-safe if given a d3dContext instance for
+// Warning: CreateWICTexture* functions are not thread-safe if given a d3dContext GetSington for
 //          auto-gen mipmap support.
 //
 // Note these functions are useful for images created as simple 2D textures. For

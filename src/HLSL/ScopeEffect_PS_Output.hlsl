@@ -21,16 +21,17 @@ float4 main(float4 position : SV_Position ,float2 texcoord : TEXCOORD0) : SV_Tar
     float2 ScopeEffect_SizeA = (ScopeEffect_Size);
 
     float4 color = outPutRT.Sample(gSamLinear ,adjTex + texcoordOffset);
-    float dx = texcoord.x  - 0.5 + ScopeEffect_OffsetA.x;
+    float dx = texcoord.x  - 0.5 - ScopeEffect_OffsetA.x;
 	float dy = texcoord.y  - 0.5 + ScopeEffect_OffsetA.y;
 	float r = (ScopeEffect_SizeA.x)  * 0.5;
 
-	float2 destTopLeft = FTS_ScreenPosInPixel - ScopeEffect_SizeA * 0.5 + ScopeEffect_OffsetA.x;
-    float2 destBottomRight = FTS_ScreenPosInPixel + ScopeEffect_SizeA * 0.5 + ScopeEffect_OffsetA.y;
+    // float2 destTopLeft = screenSize * 0.5 - ScopeEffect_Size * 0.5;
+    // float2 destBottomRight = screenSize * 0.5 + ScopeEffect_Size * 0.5;
+	float2 destTopLeft = 0.5f - ScopeEffect_SizeA.x * 0.5 - ScopeEffect_OffsetA.x;
+    float2 destBottomRight = 0.5f + ScopeEffect_SizeA.y * 0.5 + ScopeEffect_OffsetA.y;
 
-	bool isRender = isCircle ? (dx * dx + dy * dy < r * r) : (pos.x >= destTopLeft.x && pos.y >= destTopLeft.y && pos.x <= destBottomRight.x && pos.y <= destBottomRight.y);
-
-    
+    float4 rect = ScopeEffect_Rect + ScopeEffect_OffsetA.xyxy;
+	bool isRender = isCircle ? (dx * dx + dy * dy < r * r) : (texcoord.x >= rect.x && texcoord.y >= rect.y && texcoord.x <= rect.z && texcoord.y <= rect.w);
 
     // if(abs(texcoord.x - FTS_ScreenPosInPixel.x) < 0.002 || abs(texcoord.y - FTS_ScreenPosInPixel.y)<0.002)
     // {

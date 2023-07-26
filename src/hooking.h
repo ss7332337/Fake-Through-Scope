@@ -10,187 +10,25 @@
 #include <wrl/client.h>
 #include "FTSData.h"
 
-#define SAFE_RELEASE(p) { if ((p)) { (p)->Release(); (p) = nullptr; } }
 
+#define SAFE_RELEASE(p) { if ((p)) { (p)->Release(); (p) = nullptr; } }
+#ifndef HR
+#	define HR(x) { HRESULT hr = (x);  if (FAILED(hr)) {_MESSAGE("%s, %i, %i",__FILE__, __LINE__ , hr);}}
+#endif
 
 void SafeWriteBuf(uintptr_t addr, void* data, size_t len);
 void SafeWrite64(uintptr_t addr, UInt64 data);
 void* GetIATAddr(void* module, const char* searchDllName, const char* searchImportName);
-const char* const mainKey[] = {
-	"None",
-	"Unknown",
-	"VK_LBUTTON",
-	"VK_RBUTTON",
-	"VK_CANCEL",
-	"VK_MBUTTON",
-	"VK_XBUTTON1",
-	"VK_XBUTTON2",
-	"Unknown",
-	"VK_BACK",
-	"VK_TAB",
-	"Unknown",
-	"Unknown",
-	"VK_CLEAR",
-	"VK_RETURN",
-	"Unknown",
-	"Unknown",
-	"VK_SHIFT",
-	"VK_CONTROL",
-	"VK_MENU",
-	"VK_PAUSE",
-	"VK_CAPITAL",
-	"VK_KANA",
-	"Unknown",
-	"VK_JUNJA",
-	"VK_FINAL",
-	"VK_KANJI",
-	"Unknown",
-	"VK_ESCAPE",
-	"VK_CONVERT",
-	"VK_NONCONVERT",
-	"VK_ACCEPT",
-	"VK_MODECHANGE",
-	"VK_SPACE",
-	"VK_PRIOR",
-	"VK_NEXT",
-	"VK_END",
-	"VK_HOME",
-	"VK_LEFT",
-	"VK_UP",
-	"VK_RIGHT",
-	"VK_DOWN",
-	"VK_SELECT",
-	"VK_PRINT",
-	"VK_EXECUTE",
-	"VK_SNAPSHOT",
-	"VK_INSERT",
-	"VK_DELETE",
-	"VK_HELP",
-	"0",
-	"1",
-	"2",
-	"3",
-	"4",
-	"5",
-	"6",
-	"7",
-	"8",
-	"9",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"A",
-	"B",
-	"C",
-	"D",
-	"E",
-	"F",
-	"G",
-	"H",
-	"I",
-	"J",
-	"K",
-	"L",
-	"M",
-	"N",
-	"O",
-	"P",
-	"Q",
-	"R",
-	"S",
-	"T",
-	"U",
-	"V",
-	"W",
-	"X",
-	"Y",
-	"Z",
-	"VK_LWIN",
-	"VK_RWIN",
-	"VK_APPS",
-	"Unknown",
-	"VK_SLEEP",
-	"VK_NUMPAD0",
-	"VK_NUMPAD1",
-	"VK_NUMPAD2",
-	"VK_NUMPAD3",
-	"VK_NUMPAD4",
-	"VK_NUMPAD5",
-	"VK_NUMPAD6",
-	"VK_NUMPAD7",
-	"VK_NUMPAD8",
-	"VK_NUMPAD9",
-	"VK_MULTIPLY",
-	"VK_ADD",
-	"VK_SEPARATOR",
-	"VK_SUBTRACT",
-	"VK_DECIMAL",
-	"VK_DIVIDE",
-	"VK_F1",
-	"VK_F2",
-	"VK_F3",
-	"VK_F4",
-	"VK_F5",
-	"VK_F6",
-	"VK_F7",
-	"VK_F8",
-	"VK_F9",
-	"VK_F10",
-	"VK_F11",
-	"VK_F12",
-	"VK_F13",
-	"VK_F14",
-	"VK_F15",
-	"VK_F16",
-	"VK_F17",
-	"VK_F18",
-	"VK_F19",
-	"VK_F20",
-	"VK_F21",
-	"VK_F22",
-	"VK_F23",
-	"VK_F24",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"VK_NUMLOCK",
-	"VK_SCROLL",
-	"VK_OEM_NEC_EQUAL",
-	"VK_OEM_FJ_MASSHOU",
-	"VK_OEM_FJ_TOUROKU",
-	"VK_OEM_FJ_LOYA",
-	"VK_OEM_FJ_ROYA",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"Unknown",
-	"VK_LSHIFT",
-	"VK_RSHIFT",
-	"VK_LCONTROL",
-	"VK_RCONTROL",
-	"VK_LMENU",
-	"VK_RMENU"
-};
 
 template <class T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;
 
+
+
 namespace Hook
 {
+	
+
 	HRESULT CreateShaderFromFile(
 		const WCHAR* csoFileNameInOut,
 		const WCHAR* hlslFileName,
@@ -237,21 +75,17 @@ namespace Hook
 		typedef void(__stdcall* D3D11VSSetConstantBuffers)(ID3D11DeviceContext* ,UINT, UINT, ID3D11Buffer* const*);
 		typedef void(__stdcall* tdefDrawIndexed)(ID3D11DeviceContext*, UINT, UINT, INT);
 		typedef HRESULT(__stdcall* tdefCreateBuffer)(ID3D11Device*, struct D3D11_BUFFER_DESC const*, struct D3D11_SUBRESOURCE_DATA const*, struct ID3D11Buffer**);
-		//typedef void(__stdcall* vfn_DeviceContext_DrawIndexed)(ID3D11DeviceContext*, UINT, UINT, INT);
 
+	private:
+		static std::once_flag flagOnce;
 
 	public:
-		static D3D& instance()
-		{
-			static D3D instance;
-			return instance;
-		}
+		
+		static D3D* GetSington();
 
 		static [[nodiscard]] bool Register() noexcept;
-		/*bool GetD3D11VMT();
-		HRESULT WINAPI HookFuncSwapChainPresent(IDXGISwapChain* pThis, UINT SyncInterval, UINT Flags);
-		bool HookPresent();*/
 
+	
 	public:
 
 		__declspec(align(16)) struct ConstBufferData
@@ -325,6 +159,7 @@ namespace Hook
 			XMFLOAT2 FTS_ScreenPos = { 0, 0 };
 			XMFLOAT2 padding6 = { 0, 0 };
 			XMFLOAT4X4 projMat;	
+			XMFLOAT4 rect;
 		};
 
 
@@ -356,16 +191,15 @@ namespace Hook
 		void RenderImGui();
 		bool GetIsShow() { return isShow; };
 		void CreateBlender();
-		void CreateConstantBuffer();
 		void QueryChangeReticleTexture();
 		void ResetZoomDelta();
-		void CreateRenderTarget();
 		void ResetUIData(ScopeData::FTSData* currData);
 		void GrabScreen();
 		void RenderToReticleTexture();
 		void RenderToReticleTextureNew(UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation);
-		static void InstallDrawIndexedHook(ID3D11Device* device, ID3D11DeviceContext* context);
-		RE::NiPoint3 CalculateScreenPoint(RE::NiAVObject* cam, RE::NiAVObject* obj, float fov);
+		void MapScopeEffectBuffer(ScopeEffectShaderData);
+		//void CallImGuiUpdateData();
+
 		RE::NiPoint3 WorldToScreen(RE::NiAVObject* cam, RE::NiAVObject* obj, float fov);
 
 	private:
@@ -379,27 +213,14 @@ namespace Hook
 		D3D& operator=(D3D&&) = delete;
 
 		static void __stdcall DrawIndexedHook(ID3D11DeviceContext* pContext, UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation);
-		//static HRESULT __stdcall ResizeBuffersHook(IDXGISwapChain* pSwapChain, UINT BufferCount, UINT Width, UINT Height, DXGI_FORMAT NewFormat, UINT SwapChainFlags);
-		//static void __stdcall SetShaderResourcesHook(ID3D11DeviceContext* pContext, UINT StartSlot, UINT NumViews, ID3D11ShaderResourceView* const* ppShaderResourceViews);
-		//static HRESULT __stdcall ClearStateHook(ID3D11DeviceContext*);
-		//static void __stdcall ClearRenderTargetViewHook(ID3D11DeviceContext* DeviceContext, ID3D11RenderTargetView* TargetView, const FLOAT ColorRGBA[4]);
 		static HRESULT __stdcall PresentHook(IDXGISwapChain*, UINT, UINT);
-		static HRESULT __stdcall CreateBufferHook(ID3D11Device* ,struct D3D11_BUFFER_DESC const*, struct D3D11_SUBRESOURCE_DATA const*, struct ID3D11Buffer**);
-
 
 		static HRESULT __stdcall D3D11CreateDeviceAndSwapChainHook(IDXGIAdapter*, D3D_DRIVER_TYPE, HMODULE, UINT, const D3D_FEATURE_LEVEL*, UINT, UINT, const DXGI_SWAP_CHAIN_DESC*, IDXGISwapChain**, ID3D11Device**, D3D_FEATURE_LEVEL*, ID3D11DeviceContext**);
 		static LRESULT __stdcall WndProcHandler(HWND, UINT, WPARAM, LPARAM);
-		/*static void WINAPI HookFuncDeviceContext_OMSetRenderTargets(ID3D11DeviceContext* pThis,
-			__in_range(0, D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT) UINT NumViews,
-			__in_ecount_opt(NumViews) ID3D11RenderTargetView* const* ppRenderTargetViews,
-			__in_opt ID3D11DepthStencilView* pDepthStencilView);*/
-		//static void WINAPI ClearDepthStencilViewHook(ID3D11DeviceContext* pThis, _In_ ID3D11DepthStencilView* pDepthStencilView, _In_ UINT ClearFlags, _In_ FLOAT Depth, _In_ UINT8 Stencil);
 		static BOOL __stdcall ClipCursorHook(RECT*);
 		static void __stdcall vsSetConstantBuffers(ID3D11DeviceContext* pContext, UINT, UINT, ID3D11Buffer* const*);
 
 		
-		//static BOOL __stdcall ClipCursorHook(RECT*);
-		//static void EnableCursor(bool enable);
 		struct ImageSpaceEffectTemporalAA_Render;
 		struct ImageSpaceEffectTemporalAA_IsActive;
 		struct ImageSpaceEffectBokehDepthOfField_Render;
@@ -426,9 +247,6 @@ namespace Hook
 			tdefDrawIndexed drawIndexed;
 			tdefCreateBuffer createBuffer;
 		};
-		/*void** g_pDeviceVMT = nullptr;
-		void** g_pSwapchainVMT = nullptr;
-		void** g_pDeviceContextVMT = nullptr;*/
 
 	public:
 		void SetNVG(int);
@@ -443,7 +261,13 @@ namespace Hook
 		bool GetRenderState() { return bQueryRender ; }
 		void SetIsUpscaler(bool flag) { bIsUpscaler = flag; }
 		void SetIsInGame(bool flag) { bIsInGame = flag; }
+		GameConstBuffer* GetGameConstBuffer() { return &gameConstBuffer; }
 
+	public:
+		static bool bLegacyMode;
+		static bool isEnableScopeEffect;
+		static bool bEnableEditMode;
+		static bool bRefreshChar;
 		
 	private:
 		static OldFuncs oldFuncs;
@@ -453,7 +277,6 @@ namespace Hook
 		static bool isEnableRender;
 		static bool bStartScope;
 		static bool bFinishAimAnim;
-		static bool bRefreshChar;
 		static int bEnableNVG;
 		static bool bCanEnableNVGEffect;
 		static bool bQueryRender;

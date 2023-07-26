@@ -3,7 +3,7 @@
 #include <string_view>
 #include <Windows.h>
 
-#include "imgui/imgui.h"
+#include "imgui.h"
 
 #include "InputUtil.h"
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <nlohmann/json.hpp>
+#include <unordered_set>
 
 #define currentFTSDataVerion 1
 
@@ -47,10 +48,11 @@ namespace ScopeData
 
 		float Size[2] = { 200.0F, 0.0F };
 		float OriSize[2] = { 200.0F, 0.0F };
+		float rectSize[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 		float ReticleSize = 4;
 
-		float fovAdjust;
+		float fovAdjust = 0;
 		Parallax parallax;
 	};
 
@@ -73,10 +75,7 @@ namespace ScopeData
 		ShaderData shaderData;
 
 		FTSData(json j, std::string pathO);
-
 		void ReloadFTSData();
-
-		
 	};
 
 
@@ -115,7 +114,7 @@ namespace ScopeData
 		void UpdateFTSData(std::string path);
 		const char* GetNVGComboKeyStr();
 
-		//bool ZoomDataWrite(RE::TESObjectWEAP::InstanceData* instance);
+		//bool ZoomDataWrite(RE::TESObjectWEAP::InstanceData* GetSington);
 		void ReloadZoomData(std::string path);
 
 		std::multimap<std::string, FTSData*>* GetScopeDataMap();

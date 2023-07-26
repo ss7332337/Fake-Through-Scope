@@ -8,59 +8,29 @@
 #include <d3dcompiler.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
-#include "imgui.h"
-#include <backends/imgui_impl_dx11.h>
-#include <backends/imgui_impl_win32.h>
-#include <misc/cpp/imgui_stdlib.h>
 #include <dxgi1_4.h>
-
+#include <ImGuiImpl.h>
 
 
 #pragma comment(lib, "D3DCompiler.lib")
 #pragma comment(lib, "dwrite.lib")
 #pragma comment(lib, "dxguid.lib")
 
-
-inline void InitCurrentScopeData(RE::BGSKeyword* animFlavorKeyword);
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-bool bLegacyMode;
-bool UsingSTS_UI;
-int scopeFrame_UI;
-float fovBase_UI;
-bool IsCircle_UI;
-float camDepth_UI;
-float ReticleSize_UI;
-float minZoom_UI;
-float maxZoom_UI;
-float PositionOffset_UI[2];
-float OriPositionOffset_UI[2];
-float Size_UI[2];
-float OriSize_UI[2];
-float radius_UI;
-float relativeFogRadius_UI;
-float scopeSwayAmount_UI;
-float maxTravel_UI;
 
-bool bEnableFG;
-bool bEnableZMove;
-bool isActive_TAA;
-bool bEnableNVGEffect;
-float nvIntensity_UI;
-float baseWeaponPos_UI;
-float MovePercentage_UI;
 
 static const char* current_item = NULL;
 static const char* current_itemA = NULL;
 
 bool isInitNVGComboKey = false;
 bool isInitNVGMainKey = false;
-bool bReloadRenderMode = false;
-bool bDisableWhileBolt = false;
+
 bool bChangeAimTexture = true;
 bool bResetZoomDelta = false;
 bool bSelfDraw = false;
 bool bGetVSConstBuffer = false;
+bool isActive_TAA;
 
 int nvgComboKeyIndex = 0;
 int nvgMainKeyIndex = 0;
@@ -119,9 +89,6 @@ const float FAR_PLANE = 1000.0f;  // Far clipping plane distance
 
 long unsigned int gCaptureNum = 0;
 
-bool isEnableScopeEffect = false;
-bool bEnableEditMode = false;
-
 float dtimer = 0;
 float gameZoomDelta = 1;
 bool bIsFirst = true;
@@ -143,6 +110,7 @@ ID3D11Buffer* targetVertexConstBufferOutPut;
 ID3D11Buffer* targetVertexConstBufferOutPut1p5;
 ID3D11Buffer* targetVertexConstBufferOutPut1;
 
+ImGuiImpl::ImGuiImplClass imguiImpl;
 
 struct RTVertex
 {
@@ -311,12 +279,23 @@ namespace Hook
 	RE::PlayerCharacter* player;
 	RE::PlayerCamera* pcam;
 	ScopeDataHandler* sdh;
-
 	
+	bool legacyFlag = true;
 
-#ifndef HR
-#	define HR(x) { HRESULT hr = (x);  if (FAILED(hr)) {_MESSAGE("%s, %i, %i",__FILE__, __LINE__ , hr);}}
-#endif
+	#define LF(f) (legacyFlag ? (f) : (f) / 1000.0f)
+
+	std::unique_ptr<float[]> LFA(float arr[], size_t size)
+	{
+		std::unique_ptr<float[]> arrNew(new float[size]);
+
+		for (size_t i = 0; i < size; i++) {
+			arrNew[i] = LF(arr[i]);
+		}
+
+		return arrNew;
+	}
+
+
 
 	const wchar_t* GetWC(const char* c)
 	{
@@ -382,15 +361,16 @@ namespace Hook
 					bool isPressed = (lParam & 0x40000000) != 0x0;
 					if (!isPressed && wParam == sdh->guiKey) {
 						isShow = !isShow;
-
+						
 						//StayInADS();
-						instance().EnableCursor(isShow);
-
+						GetSington()->EnableCursor(isShow);
+						imguiImpl.PlayerAim(isShow);
 						auto input = (RE::BSInputDeviceManager::GetSingleton());
 						if (input) {
 							input->valueQueued = !isShow;
 							input->pollingEnabled = !isShow;
 						}
+						
 					}
 				}
 				break;
@@ -414,6 +394,11 @@ namespace Hook
 
 	XMMATRIX GetProjectionMatrix(float fov)
 	{
+		if (windowHeight == 0 || windowWidth == 0) {
+			windowWidth = RE::BSGraphics::RendererData::GetSingleton()->renderWindow->windowWidth;
+			windowHeight = RE::BSGraphics::RendererData::GetSingleton()->renderWindow->windowHeight;
+		}
+
 		XMMATRIX projectionMatrix = XMMatrixPerspectiveFovLH(
 			fov,                         // Field of view angle
 			windowWidth / windowHeight,  // Aspect ratio
@@ -768,14 +753,14 @@ namespace Hook
 	{
 
 		if (bChangeAimTexture) {
-			if (instance().mTextDDS_SRV)
-					instance().mTextDDS_SRV.ReleaseAndGetAddressOf();
+			if (GetSington()->mTextDDS_SRV)
+					GetSington()->mTextDDS_SRV.ReleaseAndGetAddressOf();
 
 			//g_Context->PSSetShaderResources(5, 1, nullptr);
 			const wchar_t* tempPath;
 			auto tempWchar = GetWC(currData->ZoomNodePath.c_str());
 			tempPath = currData->ZoomNodePath.empty() ? L"Data/Textures/FTS/Empty.dds" : tempWchar;
-			HR(CreateDDSTextureFromFile(g_Device.Get(), tempPath, nullptr, instance().mTextDDS_SRV.GetAddressOf()));
+			HR(CreateDDSTextureFromFile(g_Device.Get(), tempPath, nullptr, GetSington()->mTextDDS_SRV.GetAddressOf()));
 
 			if (tempWchar)
 					free((void*)tempWchar);
@@ -829,6 +814,15 @@ namespace Hook
 
 #pragma region MyScopeShaderData
 		if (!bEnableEditMode) {
+
+			legacyFlag = currData->legacyMode;
+
+			auto tempPosOffset = LFA(currData->shaderData.PositionOffset, 2);
+			auto tempOriPosOffest = LFA(currData->shaderData.OriPositionOffset, 2);
+
+			auto tempSize = LFA(currData->shaderData.Size, 2);
+			auto tempSize_Rect = LFA(currData->shaderData.rectSize, 4);
+
 			scopeData.BaseWeaponPos = currData->shaderData.baseWeaponPos;
 			scopeData.camDepth = currData->shaderData.camDepth;
 			scopeData.EnableNV = currData->shaderData.bCanEnableNV ? bEnableNVG : 0;
@@ -841,10 +835,11 @@ namespace Hook
 			scopeData.parallax_relativeFogRadius = currData->shaderData.parallax.relativeFogRadius;
 			scopeData.parallax_scopeSwayAmount = currData->shaderData.parallax.scopeSwayAmount;
 			scopeData.ReticleSize = currData->shaderData.ReticleSize;
-			scopeData.ScopeEffect_Offset = { currData->shaderData.PositionOffset[0], currData->shaderData.PositionOffset[1] };
-			scopeData.ScopeEffect_OriPositionOffset = { currData->shaderData.OriPositionOffset[0], currData->shaderData.OriPositionOffset[1] };
+			scopeData.ScopeEffect_Offset = { tempPosOffset[0], tempPosOffset[1] };
+			scopeData.ScopeEffect_OriPositionOffset = { tempOriPosOffest[0], tempOriPosOffest[1] };
 			scopeData.ScopeEffect_OriSize = { currData->shaderData.OriSize[0], currData->shaderData.OriSize[1] };
-			scopeData.ScopeEffect_Size = { currData->shaderData.Size[0], currData->shaderData.Size[1] };
+			scopeData.ScopeEffect_Size = { tempSize[0], tempSize[1] };
+			scopeData.rect = { tempSize_Rect[0], tempSize_Rect[1], tempSize_Rect[2], tempSize_Rect[3] };
 			scopeData.baseFovAdjustTarget = currData->shaderData.fovAdjust;
 			bLegacyMode = currData->legacyMode;
 
@@ -858,22 +853,22 @@ namespace Hook
 #pragma endregion
 
 		D3D11_MAPPED_SUBRESOURCE mappedDataA;
-		HR(g_Context->Map(instance().m_pScopeEffectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataA));
-		memcpy_s(mappedDataA.pData, sizeof(ScopeEffectShaderData), &instance().scopeData, sizeof(ScopeEffectShaderData));
-		g_Context->Unmap(instance().m_pScopeEffectBuffer.Get(), 0);
+		HR(g_Context->Map(GetSington()->m_pScopeEffectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataA));
+		memcpy_s(mappedDataA.pData, sizeof(ScopeEffectShaderData), &GetSington()->scopeData, sizeof(ScopeEffectShaderData));
+		g_Context->Unmap(GetSington()->m_pScopeEffectBuffer.Get(), 0);
 
 		D3D11_MAPPED_SUBRESOURCE mappedDataB;
-		HR(g_Context->Map(instance().m_VSBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataB));
-		memcpy_s(mappedDataB.pData, sizeof(VSConstantData), &instance().vsConstanData, sizeof(VSConstantData));
-		g_Context->Unmap(instance().m_VSBuffer.Get(), 0);
+		HR(g_Context->Map(GetSington()->m_VSBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataB));
+		memcpy_s(mappedDataB.pData, sizeof(VSConstantData), &GetSington()->vsConstanData, sizeof(VSConstantData));
+		g_Context->Unmap(GetSington()->m_VSBuffer.Get(), 0);
 
 		constBufferData.width = windowWidth;
 		constBufferData.height = windowHeight;
 
 		D3D11_MAPPED_SUBRESOURCE mappedData;
-		HR(g_Context->Map(instance().m_pConstantBufferData.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData));
-		memcpy_s(mappedData.pData, sizeof(VSConstantData), &instance().constBufferData, sizeof(VSConstantData));
-		g_Context->Unmap(instance().m_pConstantBufferData.Get(), 0);
+		HR(g_Context->Map(GetSington()->m_pConstantBufferData.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData));
+		memcpy_s(mappedData.pData, sizeof(VSConstantData), &GetSington()->constBufferData, sizeof(VSConstantData));
+		g_Context->Unmap(GetSington()->m_pConstantBufferData.Get(), 0);
 		
 	}
 
@@ -912,8 +907,8 @@ namespace Hook
 		g_Context->PSSetConstantBuffers(4, 1, m_pConstantBufferData.GetAddressOf());
 		g_Context->PSSetConstantBuffers(5, 1, m_pScopeEffectBuffer.GetAddressOf());
 
-		g_Context->PSSetShaderResources(4, 1, instance().mShaderResourceView.GetAddressOf());
-		g_Context->PSSetShaderResources(5, 1, instance().mTextDDS_SRV.GetAddressOf());
+		g_Context->PSSetShaderResources(4, 1, GetSington()->mShaderResourceView.GetAddressOf());
+		g_Context->PSSetShaderResources(5, 1, GetSington()->mTextDDS_SRV.GetAddressOf());
 
 		
 
@@ -969,7 +964,7 @@ namespace Hook
 
 			g_Context->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
 			g_Context->PSSetShaderResources(4, 1, &m_DstView);
-			g_Context->PSSetShaderResources(5, 1, instance().mTextDDS_SRV.GetAddressOf());
+			g_Context->PSSetShaderResources(5, 1, GetSington()->mTextDDS_SRV.GetAddressOf());
 
 			bSelfDraw = true;
 			g_Context->DrawIndexed(3, 0, 0);
@@ -1031,6 +1026,16 @@ namespace Hook
 			
 	}
 
+	void D3D::MapScopeEffectBuffer(ScopeEffectShaderData data)
+	{
+		scopeData = data;
+
+		/*D3D11_MAPPED_SUBRESOURCE mappedDataA;
+		HR(g_Context->Map(m_pScopeEffectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataA));
+		memcpy_s(mappedDataA.pData, sizeof(ScopeEffectShaderData), &data, sizeof(ScopeEffectShaderData));
+		g_Context->Unmap(m_pScopeEffectBuffer.Get(), 0);*/
+	}
+
 	static int copyCount = 0;
 
 	void __stdcall D3D::DrawIndexedHook(ID3D11DeviceContext* pContext, UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation)
@@ -1041,18 +1046,13 @@ namespace Hook
 			pContext->IAGetVertexBuffers(0, 1, &veBuffer, &Stride, &veBufferOffset);
 			if (veBuffer != NULL)
 				veBuffer->GetDesc(&vedesc);
-			if (veBuffer != NULL) {
-				veBuffer->Release();
-				veBuffer = NULL;
-			}
+			SAFE_RELEASE(veBuffer);
 
 			pContext->IAGetIndexBuffer(&inBuffer, &inFormat, &inOffset);
+
 			if (inBuffer != NULL)
 				inBuffer->GetDesc(&indesc);
-			if (inBuffer != NULL) {
-				inBuffer->Release();
-				inBuffer = NULL;
-			}
+			SAFE_RELEASE(inBuffer);
 
 
 			if (20 == Stride && 24 == IndexCount && indesc.ByteWidth == 0x0000000008000000 && vedesc.ByteWidth == 0x0000000008000000) {
@@ -1105,9 +1105,7 @@ namespace Hook
 									g_Context->CopyResource(targetVertexConstBufferOutPut1p5, targetVertexConstBuffer1p5);
 
 								}
-
-								
-								
+	
 								targetIndexCount = IndexCount;
 								targetStartIndexLocation = StartIndexLocation;
 								targetBaseVertexLocation = BaseVertexLocation;
@@ -1118,8 +1116,7 @@ namespace Hook
 
 								return g_Context->DrawIndexedInstanced(24, 0, 0, 0, 0);
 							}
-
-							pTexture2D->Release();
+							SAFE_RELEASE(pTexture2D);
 						}
 				}
 			}
@@ -1150,8 +1147,6 @@ namespace Hook
 				HR(g_Device->CreateRenderTargetView(mBackBuffer, nullptr, m_pRenderTargetView.GetAddressOf()));
 
 				bHasGetBackBuffer = true;
-
-				
 			}
 
 			if (mShaderResourceView)
@@ -1181,12 +1176,12 @@ namespace Hook
 				g_Context->OMGetRenderTargets(1, &tempRt, &tempSV);
 
 				UpdateScene(currData);
-				instance().GrabScreen();
+				GetSington()->GrabScreen();
 
 				if (bLegacyMode)
-					instance().RenderToReticleTexture();
+					GetSington()->RenderToReticleTexture();
 				else
-					instance().RenderToReticleTextureNew(targetIndexCount, targetStartIndexLocation, targetBaseVertexLocation);
+					GetSington()->RenderToReticleTextureNew(targetIndexCount, targetStartIndexLocation, targetBaseVertexLocation);
 				
 				g_Context->OMSetRenderTargets(1, &tempRt, tempSV);
 
@@ -1195,268 +1190,17 @@ namespace Hook
 		}
 	}
 
-	void D3D::ResetUIData(FTSData* currData)
-	{
-		bLegacyMode = currData->legacyMode;
-		UsingSTS_UI = ScopeDataHandler::GetSingleton()->GetCurrentFTSData()->UsingSTS;
-		scopeFrame_UI = currData->scopeFrame;
-		IsCircle_UI = currData->shaderData.IsCircle;
-		camDepth_UI = currData->shaderData.camDepth;
-		ReticleSize_UI = currData->shaderData.ReticleSize;
-		minZoom_UI = currData->shaderData.minZoom;
-		maxZoom_UI = currData->shaderData.maxZoom;
-		PositionOffset_UI[0] = currData->shaderData.PositionOffset[0];
-		PositionOffset_UI[1] = currData->shaderData.PositionOffset[1];
-		OriPositionOffset_UI[0] = currData->shaderData.OriPositionOffset[0];
-		OriPositionOffset_UI[1] = currData->shaderData.OriPositionOffset[1];
-		Size_UI[0] = currData->shaderData.Size[0];
-		Size_UI[1] = currData->shaderData.Size[1];
-		OriSize_UI[0] = currData->shaderData.OriSize[0];
-		OriSize_UI[1] = currData->shaderData.OriSize[1];
-
-		radius_UI = currData->shaderData.parallax.radius;
-		relativeFogRadius_UI = currData->shaderData.parallax.relativeFogRadius;
-		scopeSwayAmount_UI = currData->shaderData.parallax.scopeSwayAmount;
-		maxTravel_UI = currData->shaderData.parallax.maxTravel;
-
-		bEnableZMove = currData->shaderData.bEnableZMove;;
-		bEnableNVGEffect = currData->shaderData.bCanEnableNV;
-		nvIntensity_UI = currData->shaderData.nvIntensity;
-		baseWeaponPos_UI = currData->shaderData.baseWeaponPos;
-		MovePercentage_UI = currData->shaderData.movePercentage;
-		bDisableWhileBolt = currData->shaderData.bBoltDisable;
-		instance().bRefreshChar = false;
-	}
-
+	
 	void D3D::RenderImGui()
 	{
-		if (isShow && bIsInGame) {
-			ImGui_ImplDX11_NewFrame();
-			ImGui_ImplWin32_NewFrame();
-			ImGui::NewFrame();
+		std::call_once(flagOnce, []() {
 
-			ImGui::Begin("Fake Throught Scope Adjusting Menu by XiFeiLi");
-			auto currData = ScopeDataHandler::GetSingleton()->GetCurrentFTSData();
-			if (!currData) {
-				ImGui::TextUnformatted("This is not FTS Supported Weapon, Consider make a Patch or Double Check your Patch!");
-				ImGui::NewLine();
-				ImGui::End();
-				ImGui::Render();
-				return;
-			}
+			imguiImpl = ImGuiImpl::ImGuiImplClass();
+		});
 
-			if (nvgComboKeyIndex != -1 && nvgMainKeyIndex != -1 && ImGui ::TreeNode("Key Binding")) {
-				nvgComboKeyIndex = sdh->comboNVKey + 1;
-				nvgMainKeyIndex = sdh->nvKey + 1;
-				guiKeyIndex = sdh->guiKey + 1;
-
-				if (ImGui::Combo("GUI Key", &guiKeyIndex, mainKey, 117)) {
-					sdh->SetGuiKey(guiKeyIndex - 1);
-				}
-
-				if (ImGui::Combo("NVG Combo Key", &nvgComboKeyIndex, mainKey, 166)) {
-					sdh->SetNVGHotKeyCombo(nvgComboKeyIndex - 1);
-				}
-
-				if (ImGui::Combo("NVG Main Key", &nvgMainKeyIndex, mainKey, 166)) {
-					sdh->SetNVGHotKeyMain(nvgMainKeyIndex - 1);
-				}
-
-				ImGui::TreePop();
-				ImGui::NewLine();
-			}
-
-			if (ImGui::Checkbox("Edit Mode", &bEnableEditMode)) {
-
-				if (player) {
-					bool isInADS = player->gunState == RE::GUN_STATE::kSighted || player->gunState == RE::GUN_STATE::kFireSighted;
-					RE::TESIdleForm* sightedForm;
-
-					if (isInADS && !bEnableEditMode) {
-						player->SetInIronSightsImpl(false);
-						//ended
-						sightedForm = (RE::TESIdleForm*)RE::TESForm::GetFormByID(0x4AD9);
-						player->currentProcess->PlayIdle(player, 0x35, sightedForm);
-					} else if (!isInADS && bEnableEditMode) {
-						player->SetInIronSightsImpl(true);
-						//started
-						sightedForm = (RE::TESIdleForm*)RE::TESForm::GetFormByID(0x4D32);
-						player->currentProcess->PlayIdle(player, 0x35, sightedForm);
-					}
-				}
-			}
-
-			if (ImGui::Button("Reload Setting", { 120, 60 })) {
-				if (ScopeData::ScopeDataHandler::GetSingleton()->GetCurrentFTSData()) {
-					ScopeData::ScopeDataHandler::GetSingleton()->GetCurrentFTSData()->ReloadFTSData();
-					InitCurrentScopeData(nullptr);
-					currData = ScopeData::ScopeDataHandler::GetSingleton()->GetCurrentFTSData();
-					ResetUIData(currData);
-					bReloadRenderMode = true;
-				}
-			}
-
-			if (bEnableEditMode) {
-				if (instance().bRefreshChar) {
-					//instance().effectIndex_UI	= ScopeDataHandler::GetSingleton()->GetEffectIndex();
-					ResetUIData(currData);
-				}
-
-				if (!player)
-					return;
-
-				ImGui::NewLine();
-				if (ImGui::TreeNode("Main Menu")) {
-					ImGui::Checkbox("Legacy Mode", &bLegacyMode);
-					ImGui::Checkbox("Disable Culling", &UsingSTS_UI);
-					ImGui::Checkbox("Disable Scope Effect While Bolt", &bDisableWhileBolt);
-					ImGui::DragInt("Effect Delay(ms)", (int*)&scopeFrame_UI, 1, 0, 5000);
-
-					ImGui::Text("curr Base Fov Adjust %.3f", pcam->fovAdjustCurrent);
-					ImGui::DragFloat("Base Fov Adjust ", &fovBase_UI, 0.05F);
-					ImGui::NewLine();
-					ImGui::TreePop();
-				}
-
-				if (ImGui::TreeNode("Shader Data")) {
-					ImGui::Checkbox("Circle Scope", &IsCircle_UI);
-					ImGui::Checkbox("bEnable ZMove", &bEnableZMove);
-
-					if (bEnableZMove) {
-						float currWeaponPos =
-							powf(instance().gameConstBuffer.weaponPos.x - instance().gameConstBuffer.rootPos.x, 2) + powf(instance().gameConstBuffer.weaponPos.y - instance().gameConstBuffer.rootPos.y, 2) + powf(instance().gameConstBuffer.weaponPos.z - instance().gameConstBuffer.rootPos.z, 2);
-						//powf(instance().weaponPos.z - instance().rootPos.z, 2);
-
-						ImGui::Text("curr WeaponPos_UI %.3f", currWeaponPos);
-						ImGui::DragFloat("Base Weapon Pos", &baseWeaponPos_UI, 0.05F);
-						ImGui::DragFloat("ZMove Percentage", &MovePercentage_UI, 0.01F, -10, 10);
-						ImGui::NewLine();
-					}
-
-					ImGui::DragFloat("Scope Depth", &camDepth_UI, 0.01F, 0, 15);
-					ImGui::DragFloat("Reticle Size", &ReticleSize_UI, 0.01F, 0, 128);
-					ImGui::NewLine();
-					ImGui::DragFloat("Min Zoom", &minZoom_UI, 0.01F, 0, 15);
-					ImGui::DragFloat("Max Zoom", &maxZoom_UI, 0.01F, 0, 15);
-					ImGui::NewLine();
-					if (bLegacyMode)
-						ImGui::DragFloat2("Dest Pos Offset", PositionOffset_UI, 0.1F, -3840, 3840);
-					else
-						ImGui::DragFloat2("Dest Pos Offset", PositionOffset_UI, 0.001F, -5, 5);
-
-					ImGui::DragFloat2("Dest Scope Size", Size_UI, 0.1F, 0, 3840);
-					ImGui::NewLine();
-
-					if (bLegacyMode)
-						ImGui::DragFloat2("Ori Pos Offset", OriPositionOffset_UI, 0.1F, -3840, 3840);
-					else
-						ImGui::DragFloat2("Ori Pos Offset", OriPositionOffset_UI, 0.001F, -5, 5);
-
-					//ImGui::DragFloat2("Ori Scope Size", OriSize_UI, 0.1F, 0, 3840);
-					ImGui::NewLine();
-
-					ImGui::Checkbox("Enable Night Vision", &bEnableNVGEffect);
-					ImGui::DragFloat("Night Vision Intensity", &nvIntensity_UI, 0.1F, 0, 1000);
-					ImGui::NewLine();
-					ImGui::TreePop();
-				}
-
-				if (ImGui::TreeNode("Parallax Data")) {
-					ImGui::DragFloat("Radius", &radius_UI, 0.01F, 0, 15);
-					ImGui::DragFloat("RelativeFog Radius", &relativeFogRadius_UI, 0.01F, 0, 15);
-					ImGui::DragFloat("Scope Sway Amount", &scopeSwayAmount_UI, 0.01F, 0, 15);
-					ImGui::DragFloat("Max Travel", &maxTravel_UI, 0.01F, 0, 15);
-					ImGui::NewLine();
-					ImGui::TreePop();
-				}
-
-				if (ImGui::Button("Save Setting", { 100, 40 })) {
-					currData = ScopeDataHandler::GetSingleton()->GetCurrentFTSData();
-					currData->legacyMode = bLegacyMode;
-					currData->UsingSTS = UsingSTS_UI;
-					currData->scopeFrame = scopeFrame_UI;
-					currData->shaderData.IsCircle = IsCircle_UI;
-					//_MESSAGE("currData->shaderData.bCanEnableNV: %i, bEnableNVGEffect: %i", currData->shaderData.bCanEnableNV, bEnableNVGEffect);
-					currData->shaderData.bCanEnableNV = bEnableNVGEffect;
-					currData->shaderData.baseWeaponPos = baseWeaponPos_UI;
-					currData->shaderData.bEnableZMove = bEnableZMove;
-					currData->shaderData.movePercentage = MovePercentage_UI;
-					currData->shaderData.camDepth = camDepth_UI;
-					currData->shaderData.ReticleSize = ReticleSize_UI;
-					currData->shaderData.minZoom = minZoom_UI;
-					currData->shaderData.maxZoom = maxZoom_UI;
-					currData->shaderData.PositionOffset[0] = PositionOffset_UI[0];
-					currData->shaderData.PositionOffset[1] = PositionOffset_UI[1];
-					currData->shaderData.OriPositionOffset[0] = OriPositionOffset_UI[0];
-					currData->shaderData.OriPositionOffset[1] = OriPositionOffset_UI[1];
-					currData->shaderData.Size[0] = Size_UI[0];
-					currData->shaderData.Size[1] = Size_UI[1];
-					currData->shaderData.OriSize[0] = OriSize_UI[0];
-					currData->shaderData.OriSize[1] = OriSize_UI[1];
-					currData->shaderData.parallax.radius = radius_UI;
-					currData->shaderData.parallax.relativeFogRadius = relativeFogRadius_UI;
-					currData->shaderData.parallax.scopeSwayAmount = scopeSwayAmount_UI;
-					currData->shaderData.parallax.maxTravel = maxTravel_UI;
-					currData->shaderData.bBoltDisable = bDisableWhileBolt;
-					currData->shaderData.nvIntensity = nvIntensity_UI;
-					currData->shaderData.fovAdjust = fovBase_UI;
-
-					ScopeData::ScopeDataHandler::GetSingleton()->WriteCurrentFTSData();
-					ResetUIData(currData);
-					instance().bRefreshChar = true;
-				}
-
-				{
-					instance().scopeData.ScopeEffect_Offset = { PositionOffset_UI[0], PositionOffset_UI[1] };
-					instance().scopeData.ScopeEffect_OriPositionOffset = { OriPositionOffset_UI[0], OriPositionOffset_UI[1] };
-					instance().scopeData.ScopeEffect_Size = { Size_UI[0], Size_UI[1] };
-					instance().scopeData.ScopeEffect_OriSize = { OriSize_UI[0], OriSize_UI[1] };
-					instance().scopeData.ReticleSize = ReticleSize_UI;
-					instance().scopeData.parallax_Radius = radius_UI;
-					instance().scopeData.parallax_relativeFogRadius = relativeFogRadius_UI;
-					instance().scopeData.parallax_scopeSwayAmount = scopeSwayAmount_UI;
-					instance().scopeData.parallax_maxTravel = maxTravel_UI;
-
-					instance().scopeData.BaseWeaponPos = baseWeaponPos_UI;
-					instance().scopeData.MovePercentage = MovePercentage_UI;
-					instance().scopeData.EnableZMove = bEnableZMove;
-					instance().scopeData.EnableNV = bEnableNVGEffect;
-
-					instance().scopeData.isCircle = IsCircle_UI;
-					instance().scopeData.camDepth = camDepth_UI;
-					instance().scopeData.baseFovAdjustTarget = fovBase_UI;
-
-					instance().scopeData.nvIntensity = nvIntensity_UI;
-					
-
-					D3D11_MAPPED_SUBRESOURCE mappedDataA;
-					HR(g_Context->Map(m_pScopeEffectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataA));
-					memcpy_s(mappedDataA.pData, sizeof(ScopeEffectShaderData), &scopeData, sizeof(ScopeEffectShaderData));
-					g_Context->Unmap(m_pScopeEffectBuffer.Get(), 0);
-
-					//runtime->set_uniform_value_bool(euv_EnableNightVision, bEnableNVGEffect);
-				}
-				//else
-				//{
-				//	ImGui::Text("Can't read FTS data! Please ensure you are in game and have a FTS supported weapon in hand!");
-				//}
-			}
-
-			auto virDir = instance().scopeData.eyeDirection;
-			auto virDirA = instance().gameConstBuffer.virDir;
-			auto abvirDir = MatMulNi3(instance().gameConstBuffer.camMat, instance().gameConstBuffer.virDir);
-
-			auto VirDirLerp = instance().scopeData.eyeDirectionLerp;
-			auto VirDirLerpA = instance().gameConstBuffer.VirDirLerp;
-			auto abVirDirLerp = MatMulNi3(instance().gameConstBuffer.camMat, instance().gameConstBuffer.VirDirLerp);
-
-			auto camMat = instance().gameConstBuffer.camMat;
-			
-			ImGui::End();
-			ImGui::Render();
-		}
-
+		imguiImpl.RenderImgui();
 	}
+
 	inline void** get_vtable_ptr(void* obj)
 	{
 		return *reinterpret_cast<void***>(obj);
@@ -1464,15 +1208,14 @@ namespace Hook
 
 	HRESULT __stdcall D3D::PresentHook(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
 	{
-		void** swapChainVTable = get_vtable_ptr(g_Device.Get());
 
 		bSelfDraw = false;
 		if (!isActive_TAA)
 		{
-			//instance().Render();
+			//instance.Render();
 		}
 		if (isShow) {
-			instance().RenderImGui();
+			GetSington()->RenderImGui();
 			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 		}
 		auto thr = oldFuncs.d3dPresent(pSwapChain, SyncInterval, Flags);
@@ -1491,7 +1234,7 @@ namespace Hook
 
 			
 			func(This, a2, a3);
-			instance().Render();
+			GetSington()->Render();
 
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
@@ -1592,6 +1335,12 @@ namespace Hook
 	}
 
 
+	D3D* D3D::GetSington()
+	{
+		static D3D instance;	
+		return &instance;
+	}
+
 	bool D3D::Register() noexcept
 	{
 		HookImportFunc("d3d11.dll", "D3D11CreateDeviceAndSwapChain", oldFuncs.d3dCreateDevice, (std::uintptr_t)D3D11CreateDeviceAndSwapChainHook);
@@ -1640,8 +1389,6 @@ namespace Hook
 		g_Device = *ppDevice;
 		g_Swapchain = *ppSwapChain;
 
-		
-
 		std::uintptr_t* vtbl1 = (std::uintptr_t*)(*ppSwapChain);
 		vtbl1 = (std::uintptr_t*)vtbl1[0];
 		HookFunc(vtbl1, 8, (std::uintptr_t)PresentHook, (std::uintptr_t*)&oldFuncs.d3dPresent);
@@ -1659,14 +1406,14 @@ namespace Hook
 		IDXGISwapChain3* mSwapChain;
 		g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain));
 		UINT backBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
-		HR(mSwapChain->GetBuffer(backBufferIndex, IID_PPV_ARGS(&instance().mRealBackBuffer)));
+		HR(mSwapChain->GetBuffer(backBufferIndex, IID_PPV_ARGS(&GetSington()->mRealBackBuffer)));
 
 		D3D11_TEXTURE2D_DESC realTexDesc;
 
 		DXGI_SWAP_CHAIN_DESC sd;
 		mSwapChain->GetDesc(&sd);
 
-		instance().mRealBackBuffer->GetDesc(&realTexDesc);
+		GetSington()->mRealBackBuffer->GetDesc(&realTexDesc);
 
 		oldFuncs.wndProc = (WNDPROC)GetWindowLongPtr(sd.OutputWindow, GWLP_WNDPROC);
 		SetWindowLongPtr(sd.OutputWindow, GWLP_WNDPROC, (LONG_PTR)WndProcHandler);
@@ -1678,6 +1425,8 @@ namespace Hook
 
 		windowWidth = realTexDesc.Width;
 		windowHeight = realTexDesc.Height;
+
+		
 
 		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO();
@@ -1761,4 +1510,9 @@ namespace Hook
 	bool D3D::isShow = false;
 	bool D3D::bIsUpscaler = false;
 	bool D3D::bIsInGame = false;
+	bool D3D::isEnableScopeEffect = false;
+	bool D3D::bEnableEditMode = false;
+	bool D3D::bLegacyMode;
+
+	std::once_flag D3D::flagOnce;
 }

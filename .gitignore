@@ -5,3 +5,7 @@
 /src/HLSL/BU/
 /.vs
 /src/HLSL/BU/新建文本文档.txt
+/src/debug.h
+/src/Utilities.h
+/src/InputUtil.h
+/src/InputUtil.cpp
