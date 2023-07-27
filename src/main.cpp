@@ -238,7 +238,6 @@ inline void InitCurrentScopeData()
 			string ftsPrefix = "FTS_";
 
 			auto result = std::find_if(weaponKeywords.begin(), weaponKeywords.end(), [&ftsPrefix](const BGSKeyword* p) {
-				_MESSAGE("%s", p->formEditorID.c_str());
 				return !std::strncmp(p->formEditorID.c_str(), ftsPrefix.c_str(), ftsPrefix.length());
 			});
 
@@ -840,11 +839,11 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a
 		return false;
 	}
 
-	hookIns = Hook::D3D::GetSington();
-	Hook::D3D::Register();
+	/*hookIns = Hook::D3D::GetSington();
+	Hook::D3D::Register();*/
 
 	logger::info(FMT_STRING("{} v0.9.0"), Version::PROJECT);
-	//HANDLE hThread = CreateThread(NULL, 0, StartHooking, (HMODULE)F4SE::WinAPI::GetCurrentModule(), 0, NULL);
+	HANDLE hThread = CreateThread(NULL, 0, StartHooking, (HMODULE)F4SE::WinAPI::GetCurrentModule(), 0, NULL);
 
 	/*hookIns = &Hook::D3D::GetSington();
 	Hook::D3D::Register();*/

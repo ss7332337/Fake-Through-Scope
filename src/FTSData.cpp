@@ -7,19 +7,178 @@
 using namespace std;
 
 //bool __fastcall GetInstanceKeywordStr(RE::TESObjectWEAP::InstanceData* a_instance, std::string* a_prefix);
-
-ScopeData::FTSData::FTSData(json j, std::string pathO)
-{
-	path = pathO;
-	
-	keywordName = j["keywordEditorID"].is_null() ? "FTS_Default" : j["keywordEditorID"];
-	animFlavorEditorID = j["AnimFlavorKeywordEditorID"].is_null() ? "FTS_NONE" : j["AnimFlavorKeywordEditorID"];
-	ReloadFTSData();
-}
-
 namespace ScopeData
 {
-	
+	FTSData::FTSData(std::string pathO)
+	{
+		path = pathO;
+	}
+
+#pragma region jsonRead
+
+	void from_json(const json& j, Parallax& p)
+	{
+		p.radius = j.value("radius", 0.0F);
+		p.relativeFogRadius = j.value("relativeFogRadius", 0.0F);
+		p.scopeSwayAmount = j.value("scopeSwayAmount", 0.0F);
+		p.maxTravel = j.value("maxTravel", 0.0F);
+	}
+
+	void from_json(const json& j, ZoomDataOverwrite& z)
+	{
+		z.x = j.value("x", 0.0F);
+		z.y = j.value("y", 0.0F);
+		z.z = j.value("z", 0.0F);
+		z.fovMul = j.value("fovMul", 1.0F);
+		z.enableZoomDateOverwrite = j.value("enableZoomDateOverwrite", false);
+	}
+
+	void from_json(const json& j, ShaderData& s)
+	{
+		s.IsCircle = j.value("IsCircle", true);
+		s.bEnableZMove = j.value("EnableZMove", false);
+		s.bCanEnableNV = j.value("EnableNV", false);
+		s.bBoltDisable = j.value("bBoltDisable", false);
+		s.nvIntensity = j.value("nvIntensity", 3.0F);
+		s.baseWeaponPos = j.value("BaseWeaponPos", 0.0F);
+		s.movePercentage = j.value("ZMovePercentage", 0.0F);
+		s.camDepth = j.value("CamDepth", 1.0F);
+		s.minZoom = j.value("MinZoom", 1.0F);
+		s.maxZoom = j.value("MaxZoom", 4.0F);
+
+		json defaultArrayOffset = { 0.0F, 0.0F };
+		json defaultArraySize = { 400.0F, 400.0F };
+		json defaultRectArray = { 235.0F, 260.0F, 775.0F, 760.0F };
+
+		if (j.contains("PositionOffset"))
+		{
+			auto positionOffsetJson = j.value("PositionOffset", defaultArrayOffset);
+			positionOffsetJson.at("x").get_to(s.PositionOffset[0]);
+			positionOffsetJson.at("y").get_to(s.PositionOffset[1]);
+		}
+		
+		if (j.contains("OriPositionOffset"))
+		{
+			auto oriPositionOffsetJson = j.value("OriPositionOffset", defaultArrayOffset);
+			oriPositionOffsetJson.at("x").get_to(s.OriPositionOffset[0]);
+			oriPositionOffsetJson.at("y").get_to(s.OriPositionOffset[1]);
+		}
+		
+		if (j.contains("OriPositionOffset")) 
+		{
+			auto sizeJson = j.value("Size", defaultArraySize);
+			sizeJson.at("x").get_to(s.Size[0]);
+			sizeJson.at("y").get_to(s.Size[1]);
+		}
+		
+		if (j.contains("OriSize"))
+		{
+			auto oriSizeJson = j.value("OriSize", defaultArraySize);
+			oriSizeJson.at("x").get_to(s.OriSize[0]);
+			oriSizeJson.at("y").get_to(s.OriSize[1]);
+		}
+
+		if (j.contains("rectSize"))
+		{
+			auto rectSizeJson = j.value("rectSize", defaultRectArray);
+
+			rectSizeJson.at("x").get_to(s.rectSize[0]);
+			rectSizeJson.at("y").get_to(s.rectSize[1]);
+			rectSizeJson.at("z").get_to(s.rectSize[2]);
+			rectSizeJson.at("w").get_to(s.rectSize[3]);
+		}
+		
+
+		s.ReticleSize = j.value("ReticleSize", 4.0F);
+		s.fovAdjust = j.value("fovAdjust", 0.0F);
+		s.parallax = j.value("Parallax", Parallax());
+	}
+
+	void from_json(const json& j, FTSData& f)
+	{
+		f.keywordName = j.value("keywordEditorID", "FTS_Default");
+		f.animFlavorEditorID = j.value("AnimFlavorKeywordEditorID", "FTS_NONE");
+		f.legacyMode = j.value("LegacyMode", true);
+		f.version = j.value("Version", 1);
+		f.UsingSTS = j.value("UsingSTS", false);
+		f.scopeFrame = j.value("scopeFrame", 1);
+		f.ZoomNodePath = j.value("ReticleTexturePath", "");
+
+		f.shaderData = j.value("ShaderData", ShaderData());
+		f.zoomDataOverwrite = j.value("ZoomDataOverwrite", ZoomDataOverwrite());
+	}
+
+#pragma endregion
+
+#pragma region jsonWrite
+
+	void to_json(json& j, const Parallax& p)
+	{
+		j = json{
+			{ "radius", p.radius },
+			{ "relativeFogRadius", p.relativeFogRadius },
+			{ "scopeSwayAmount", p.scopeSwayAmount },
+			{ "maxTravel", p.maxTravel }
+		};
+	}
+
+	void to_json(json& j, const ZoomDataOverwrite& z)
+	{
+		j = json{
+			{ "x", z.x },
+			{ "y", z.y },
+			{ "z", z.z },
+			{ "fovMul", z.fovMul },
+			{ "enableZoomDateOverwrite", z.enableZoomDateOverwrite }
+		};
+	}
+
+	void to_json(json& j, const ShaderData& s)
+	{
+		j = json{
+			{ "IsCircle", s.IsCircle },
+			{ "EnableZMove", s.bEnableZMove },
+			{ "EnableNV", s.bCanEnableNV },
+			{ "bBoltDisable", s.bBoltDisable },
+			{ "nvIntensity", s.nvIntensity },
+			{ "BaseWeaponPos", s.baseWeaponPos },
+			{ "ZMovePercentage", s.movePercentage },
+			{ "CamDepth", s.camDepth },
+			{ "MinZoom", s.minZoom },
+			{ "MaxZoom", s.maxZoom },
+			{ "PositionOffset", { { "x", s.PositionOffset[0] }, { "y", s.PositionOffset[1] } } },
+			{ "OriPositionOffset", { { "x", s.OriPositionOffset[0] }, { "y", s.OriPositionOffset[1] } } },
+			{ "Size", { { "x", s.Size[0] }, { "y", s.Size[1] } } },
+			{ "OriSize", { { "x", s.OriSize[0] }, { "y",s.OriSize[1] } } },
+			{ "rectSize", { { "x", s.rectSize[0] }, { "y", s.rectSize[1] }, { "z", s.rectSize[2] }, { "w", s.rectSize[3] } } },
+
+			{ "ReticleSize", s.ReticleSize },
+			{ "fovAdjust", s.fovAdjust },
+			//
+			{ "Parallax", s.parallax }
+		};
+	}
+
+	// 为FTSData类型定义to_json函数
+	void to_json(json& j, const FTSData& f)
+	{
+		j = json{
+			{ "keywordEditorID", f.keywordName },
+			{ "AnimFlavorKeywordEditorID", f.animFlavorEditorID },
+			{ "LegacyMode", f.legacyMode },
+			{ "path", f.path },
+			{ "Version", f.version },
+			{ "UsingSTS", f.UsingSTS },
+			{ "scopeFrame", f.scopeFrame },
+			{ "ReticleTexturePath", f.ZoomNodePath },
+			//
+			{ "ShaderData", f.shaderData },
+			{ "ZoomDataOverwrite", f.zoomDataOverwrite }
+		};
+	}
+
+#	pragma endregion
+
 
 	void ScopeDataHandler::TestingJson()
 	{
@@ -33,50 +192,7 @@ namespace ScopeData
 			std::string temp = currentData->path;
 
 			std::ifstream f(temp);
-			json j = json::parse(f);
-
-			//j["keywordEditorID"] = currentData->keywordData.keywordName;
-			j["LegacyMode"] = currentData->legacyMode;
-			j["UsingSTS"] = currentData->UsingSTS;
-
-			j["scopeFrame"] = currentData->scopeFrame;
-
-			j["ShaderData"]["IsCircle"] = currentData->shaderData.IsCircle;
-			j["ShaderData"]["EnableZMove"] = currentData->shaderData.bEnableZMove;
-			j["ShaderData"]["EnableNV"] = currentData->shaderData.bCanEnableNV;
-			j["ShaderData"]["bBoltDisable"] = currentData->shaderData.bBoltDisable;
-
-			j["ShaderData"]["fovAdjust"] = currentData->shaderData.fovAdjust;
-			j["ShaderData"]["BaseWeaponPos"] = currentData->shaderData.baseWeaponPos;
-			j["ShaderData"]["ZMovePercentage"] = currentData->shaderData.movePercentage;
-			j["ShaderData"]["NVIntensity"]  = currentData->shaderData.nvIntensity;
-
-			j["ShaderData"]["CamDepth"] = currentData->shaderData.camDepth;
-			j["ShaderData"]["ReticleSize"] = currentData->shaderData.ReticleSize;
-
-			j["ShaderData"]["MinZoom"] = currentData->shaderData.minZoom;
-			j["ShaderData"]["MaxZoom"] = currentData->shaderData.maxZoom;
-
-			j["ShaderData"]["Size"]["x"] = currentData->shaderData.Size[0];
-			j["ShaderData"]["Size"]["y"] = currentData->shaderData.Size[1];
-			j["ShaderData"]["rectSize"]["x"] = currentData->shaderData.rectSize[0];
-			j["ShaderData"]["rectSize"]["y"] = currentData->shaderData.rectSize[1];
-			j["ShaderData"]["rectSize"]["z"] = currentData->shaderData.rectSize[2];
-			j["ShaderData"]["rectSize"]["w"] = currentData->shaderData.rectSize[3];
-
-			j["ShaderData"]["OriSize"]["x"] = currentData->shaderData.OriSize[0];
-			j["ShaderData"]["OriSize"]["y"] = currentData->shaderData.OriSize[1];
-
-			j["ShaderData"]["PositionOffset"]["x"] = currentData->shaderData.PositionOffset[0];
-			j["ShaderData"]["PositionOffset"]["y"] = currentData->shaderData.PositionOffset[1];
-
-			j["ShaderData"]["OriPositionOffset"]["x"] = currentData->shaderData.OriPositionOffset[0] ;
-			j["ShaderData"]["OriPositionOffset"]["y"] = currentData->shaderData.OriPositionOffset[1] ;
-
-			j["ShaderData"]["Parallax"]["radius"] = currentData->shaderData.parallax.radius ;
-			j["ShaderData"]["Parallax"]["relativeFogRadius"] = currentData->shaderData.parallax.relativeFogRadius ;
-			j["ShaderData"]["Parallax"]["scopeSwayAmount"] = currentData->shaderData.parallax.scopeSwayAmount ;
-			j["ShaderData"]["Parallax"]["maxTravel"] = currentData->shaderData.parallax.maxTravel ;
+			json j = *currentData;
 
 			std::ofstream o(temp);
 			o <<  j << std::endl;
@@ -86,60 +202,19 @@ namespace ScopeData
 		}
 	}
 
-	void FTSData::ReloadFTSData()
+	void ScopeDataHandler::ReloadFTSData(FTSData* data)
 	{
-		std::ifstream f(path);
+		std::ifstream f(data->path);
+
 		json j = json::parse(f);
-		legacyMode = j["LegacyMode"].is_null() ? true : (bool)j["LegacyMode"];
-		version = j["Version"].is_null() ? (int)currentFTSDataVerion : (int)j["Version"];
-		UsingSTS = j["UsingSTS"].is_null() ? false : (bool)j["UsingSTS"];
-		ZoomNodePath = j["ReticleTexturePath"].is_null() ? "Data/Textures/FTS/Default.dds" : j["ReticleTexturePath"];
-		//UnalignedMode = j["UnalignedMode"].is_null() ? true : (bool)j["UnalignedMode"];
-		scopeFrame = j["scopeFrame"].is_null() ? 1 : (unsigned int)j["scopeFrame"];
+		
+		j.get_to(*data);
 
-		shaderData.IsCircle = j["ShaderData"]["IsCircle"].is_null() ? true : (bool)j["ShaderData"]["IsCircle"];
-		shaderData.bEnableZMove = j["ShaderData"]["EnableZMove"].is_null() ? true : (bool)j["ShaderData"]["EnableZMove"];
-		shaderData.bCanEnableNV = j["ShaderData"]["EnableNV"].is_null() ? true : (bool)j["ShaderData"]["EnableNV"];
-		shaderData.bBoltDisable = j["ShaderData"]["bBoltDisable"].is_null() ? true : (bool)j["ShaderData"]["bBoltDisable"];
-		shaderData.fovAdjust = j["ShaderData"]["fovAdjust"].is_null() ? 0.0F : (float)j["ShaderData"]["fovAdjust"];
+		ScopeData::ScopeDataHandler::GetSingleton()->SetCurrentFTSData(data);
 
-		shaderData.baseWeaponPos = j["ShaderData"]["BaseWeaponPos"].is_null() ? 0 : (float)j["ShaderData"]["BaseWeaponPos"];
-		shaderData.movePercentage = j["ShaderData"]["ZMovePercentage"].is_null() ? 0 : (float)j["ShaderData"]["ZMovePercentage"];
-
-		shaderData.camDepth = j["ShaderData"]["CamDepth"].is_null() ? 1 : (float)j["ShaderData"]["CamDepth"];
-		shaderData.nvIntensity = j["ShaderData"]["NVIntensity"].is_null() ? 3 : (float)j["ShaderData"]["NVIntensity"];
-		shaderData.ReticleSize = j["ShaderData"]["ReticleSize"].is_null() ? 4 : (float)j["ShaderData"]["ReticleSize"];
-
-		shaderData.minZoom = j["ShaderData"]["MinZoom"].is_null() ? 1 : (float)j["ShaderData"]["MinZoom"];
-		shaderData.maxZoom = j["ShaderData"]["MaxZoom"].is_null() ? 4 : (float)j["ShaderData"]["MaxZoom"];
-
-		shaderData.Size[0] = j["ShaderData"]["Size"]["x"].is_null() ? 100.0F : (float)j["ShaderData"]["Size"]["x"];
-		shaderData.Size[1] = j["ShaderData"]["Size"]["y"].is_null() ? 100.0F : (float)j["ShaderData"]["Size"]["y"];
-
-		shaderData.rectSize[0] = j["ShaderData"]["rectSize"]["x"].is_null() ? 0.15F : (float)j["ShaderData"]["rectSize"]["x"];
-		shaderData.rectSize[1] = j["ShaderData"]["rectSize"]["y"].is_null() ? 0.3F : (float)j["ShaderData"]["rectSize"]["y"];
-		shaderData.rectSize[2] = j["ShaderData"]["rectSize"]["z"].is_null() ? 0.75F : (float)j["ShaderData"]["rectSize"]["z"];
-		shaderData.rectSize[3] = j["ShaderData"]["rectSize"]["w"].is_null() ? 0.75F : (float)j["ShaderData"]["rectSize"]["w"];
-
-		shaderData.OriSize[0] = j["ShaderData"]["OriSize"]["x"].is_null() ? 100.0F : (float)j["ShaderData"]["OriSize"]["x"];
-		shaderData.OriSize[1] = j["ShaderData"]["OriSize"]["y"].is_null() ? 100.0F : (float)j["ShaderData"]["OriSize"]["y"];
-
-		shaderData.PositionOffset[0] = j["ShaderData"]["PositionOffset"]["x"].is_null() ? 0 : (float)j["ShaderData"]["PositionOffset"]["x"];
-		shaderData.PositionOffset[1] = j["ShaderData"]["PositionOffset"]["y"].is_null() ? 0 : (float)j["ShaderData"]["PositionOffset"]["y"];
-
-		shaderData.OriPositionOffset[0] = j["ShaderData"]["OriPositionOffset"]["x"].is_null() ? 0 : (float)j["ShaderData"]["OriPositionOffset"]["x"];
-		shaderData.OriPositionOffset[1] = j["ShaderData"]["OriPositionOffset"]["y"].is_null() ? 0 : (float)j["ShaderData"]["OriPositionOffset"]["y"];
-
-		shaderData.parallax.radius = j["ShaderData"]["Parallax"]["radius"].is_null() ? 2 : (float)j["ShaderData"]["Parallax"]["radius"];
-		shaderData.parallax.relativeFogRadius = j["ShaderData"]["Parallax"]["relativeFogRadius"].is_null() ? 9 : (float)j["ShaderData"]["Parallax"]["relativeFogRadius"];
-		shaderData.parallax.scopeSwayAmount = j["ShaderData"]["Parallax"]["scopeSwayAmount"].is_null() ? 3 : (float)j["ShaderData"]["Parallax"]["scopeSwayAmount"];
-		shaderData.parallax.maxTravel = j["ShaderData"]["Parallax"]["maxTravel"].is_null() ? 0.75F : (float)j["ShaderData"]["Parallax"]["maxTravel"];
-
-		ScopeData::ScopeDataHandler::GetSingleton()->SetCurrentFTSData(this);
+		ScopeData::ScopeDataHandler::GetSingleton()->UpdateFTSData(data->path);
 
 		f.close();
-
-		ScopeData::ScopeDataHandler::GetSingleton()->UpdateFTSData(path);
 	}
 
 	void ScopeDataHandler::ReloadCurrentFTSData()
@@ -169,11 +244,10 @@ namespace ScopeData
 			return false;
 
 		std::ifstream f(path);
-		json data = json::parse(f);
-		if (data.empty())
-			return false;
 
-		FTSData* tempdata = new FTSData(data, path);
+		FTSData* tempdata = new FTSData(path);
+
+		ReloadFTSData(tempdata);
 
 		ScopeDataMap.emplace(tempdata->keywordName.data(), tempdata);
 

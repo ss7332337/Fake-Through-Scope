@@ -179,8 +179,8 @@ namespace ImGuiImpl
 	void ImGuiImplClass::ReloadData()
 	{
 		if (ImGui::Button("Reload Setting", { 120, 60 })) {
-			if (sdh->GetCurrentFTSData()) {
-				sdh->GetCurrentFTSData()->ReloadFTSData();
+			if (auto data = sdh->GetCurrentFTSData()) {
+				sdh->ReloadFTSData(data);
 				InitCurrentScopeData();
 				currData = sdh->GetCurrentFTSData();
 				ResetUIData(this);

@@ -8,6 +8,8 @@
 using json = nlohmann::json;
 namespace ScopeData
 {
+	std::vector<std::string_view> splitSV(std::string_view strv, std::string_view delims = " ");
+
 	struct CullingData
 	{
 		CullingData(int a, int b)
@@ -25,6 +27,15 @@ namespace ScopeData
 		float relativeFogRadius = 9;
 		float scopeSwayAmount = 3;
 		float maxTravel = 1;
+	};
+
+	struct ZoomDataOverwrite
+	{
+		float x = 0;
+		float y = 0;
+		float z = 0;
+		float fovMul = 1;
+		bool enableZoomDateOverwrite = false;
 	};
 
 	struct ShaderData
@@ -48,7 +59,7 @@ namespace ScopeData
 
 		float Size[2] = { 200.0F, 0.0F };
 		float OriSize[2] = { 200.0F, 0.0F };
-		float rectSize[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		float rectSize[4] = { 235.0f, 200.0f, 775.0f, 760.0f };
 
 		float ReticleSize = 4;
 
@@ -56,26 +67,25 @@ namespace ScopeData
 		Parallax parallax;
 	};
 
-	std::vector<std::string_view> splitSV(std::string_view strv, std::string_view delims = " ");
-
-
+	
 	class FTSData
 	{
 	public:
 		bool legacyMode = true;
-		std::string path;
-		int version;
-		std::string keywordName;
-		std::string animFlavorEditorID;
+		std::string path = "";
+		int version = 1;
+		std::string keywordName = "FTS_Default";
+		std::string animFlavorEditorID = "FTS_NONE";
 		bool UsingSTS = false;
-		//bool UnalignedMode = false;
 		unsigned int scopeFrame = 1;
 		std::string ZoomNodePath;
-		//std::vector<CullingData> CullingDataes;
-		ShaderData shaderData;
 
-		FTSData(json j, std::string pathO);
-		void ReloadFTSData();
+		ShaderData shaderData;
+		ZoomDataOverwrite zoomDataOverwrite;
+
+		FTSData(std::string pathO);
+		//FTSData(json j, std::string pathO);
+		//void ReloadFTSData();
 	};
 
 
@@ -87,6 +97,7 @@ namespace ScopeData
 
 		static ScopeDataHandler* GetSingleton();
 		
+		void ReloadFTSData(FTSData*);
 		void ReadDefaultScopeDataFile();
 		void ReadCustomScopeDataFiles(std::string path);
 		void TestingJson();

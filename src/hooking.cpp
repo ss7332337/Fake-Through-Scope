@@ -1131,6 +1131,7 @@ namespace Hook
 	{
 		assert(g_Context);
 		assert(g_Swapchain);
+		assert(g_Device);
 
 		if (bQueryRender) {
 
@@ -1193,10 +1194,6 @@ namespace Hook
 	
 	void D3D::RenderImGui()
 	{
-		std::call_once(flagOnce, []() {
-
-			imguiImpl = ImGuiImpl::ImGuiImplClass();
-		});
 
 		imguiImpl.RenderImgui();
 	}
@@ -1217,6 +1214,7 @@ namespace Hook
 		if (isShow) {
 			GetSington()->RenderImGui();
 			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
 		}
 		auto thr = oldFuncs.d3dPresent(pSwapChain, SyncInterval, Flags);
 		return thr;
@@ -1411,7 +1409,7 @@ namespace Hook
 		D3D11_TEXTURE2D_DESC realTexDesc;
 
 		DXGI_SWAP_CHAIN_DESC sd;
-		mSwapChain->GetDesc(&sd);
+		g_Swapchain->GetDesc(&sd);
 
 		GetSington()->mRealBackBuffer->GetDesc(&realTexDesc);
 
@@ -1426,6 +1424,7 @@ namespace Hook
 		windowWidth = realTexDesc.Width;
 		windowHeight = realTexDesc.Height;
 
+		imguiImpl = ImGuiImpl::ImGuiImplClass();
 		
 
 		ImGui::CreateContext();
