@@ -4,6 +4,7 @@
 #include <backends/imgui_impl_dx11.h>
 #include <backends/imgui_impl_win32.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include "FTSData.h"
 
 
 const char* const mainKey[] = {
@@ -178,63 +179,6 @@ const char* const mainKey[] = {
 
 namespace ImGuiImpl
 {
-	class ImGuiImpl_Float
-	{
-	private:
-		float value;
-
-	public:
-		// 构造函数
-		ImGuiImpl_Float(float v) :
-			value(v) {}
-
-		static bool LegacyMode;
-
-		ImGuiImpl_Float()
-		{
-			value = 0.0f;
-		}
-
-		// 重载+运算符
-		ImGuiImpl_Float operator+(const ImGuiImpl_Float& other) const
-		{
-			return ImGuiImpl_Float(value + other.value);
-		}
-
-		// 重载*运算符
-		ImGuiImpl_Float operator*(const ImGuiImpl_Float& other) const
-		{
-			return ImGuiImpl_Float(value * other.value);
-		}
-
-		// 重载=运算符
-		ImGuiImpl_Float& operator=(const float& v)
-		{
-			value = v;
-			return *this;
-		}
-
-		// 重载转换为float的函数
-		operator float() const
-		{
-			if (!LegacyMode) {
-				return value / 1000.0f;
-			} else {
-				return value;
-			}
-		}
-
-		// 重载转换为float*的函数
-		operator float*()
-		{
-			if (!LegacyMode)
-			{
-				value /= 1000.0f;
-			}
-			return &value;
-		}
-	};
-
 
 	class ImGuiImplClass
 	{
@@ -245,6 +189,11 @@ namespace ImGuiImpl
 	public:
 		
 		bool bCanRender;
+
+
+		ScopeData::ZoomDataOverwrite Imgui_ZDO;
+		ScopeData::ZoomDataOverwrite ori_ZDO;
+
 
 		bool bLegacyMode;
 		bool UsingSTS_UI;
@@ -291,6 +240,7 @@ namespace ImGuiImpl
 		void ParallaxDataSection();
 		void PlayerAim(bool);
 
+		void UpdateWeaponInstance(RE::TESObjectWEAP::InstanceData*);
 		void UpdateImGuiData();
 	};
 

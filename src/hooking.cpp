@@ -9,7 +9,7 @@
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <dxgi1_4.h>
-#include <ImGuiImpl.h>
+
 
 
 #pragma comment(lib, "D3DCompiler.lib")
@@ -110,7 +110,7 @@ ID3D11Buffer* targetVertexConstBufferOutPut;
 ID3D11Buffer* targetVertexConstBufferOutPut1p5;
 ID3D11Buffer* targetVertexConstBufferOutPut1;
 
-ImGuiImpl::ImGuiImplClass imguiImpl;
+ImGuiImpl::ImGuiImplClass* imguiImpl;
 
 struct RTVertex
 {
@@ -364,7 +364,7 @@ namespace Hook
 						
 						//StayInADS();
 						GetSington()->EnableCursor(isShow);
-						imguiImpl.PlayerAim(isShow);
+						imguiImpl->PlayerAim(isShow);
 						auto input = (RE::BSInputDeviceManager::GetSingleton());
 						if (input) {
 							input->valueQueued = !isShow;
@@ -1042,7 +1042,7 @@ namespace Hook
 	{
 		bool needToBeCull = false;
 
-		if (!bSelfDraw && isEnableRender) {
+		if (!bSelfDraw) {
 			pContext->IAGetVertexBuffers(0, 1, &veBuffer, &Stride, &veBufferOffset);
 			if (veBuffer != NULL)
 				veBuffer->GetDesc(&vedesc);
@@ -1194,8 +1194,7 @@ namespace Hook
 	
 	void D3D::RenderImGui()
 	{
-
-		imguiImpl.RenderImgui();
+		imguiImpl->RenderImgui();
 	}
 
 	inline void** get_vtable_ptr(void* obj)
@@ -1424,9 +1423,6 @@ namespace Hook
 		windowWidth = realTexDesc.Width;
 		windowHeight = realTexDesc.Height;
 
-		imguiImpl = ImGuiImpl::ImGuiImplClass();
-		
-
 		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO();
 		(void)io;
@@ -1492,7 +1488,18 @@ namespace Hook
 	void D3D::SetFinishAimAnim(bool flag) { bFinishAimAnim = flag; }
 	void D3D::SetScopeEffect(bool flag) { isEnableScopeEffect = flag; }
 	bool D3D::GetScopeEffect() { return isEnableScopeEffect; }
-	void D3D::SetInterfaceTextRefresh(bool flag) {bRefreshChar = flag;bEnableEditMode = false;}
+	void D3D::SetInterfaceTextRefresh(bool flag)
+	{
+		bRefreshChar = flag;
+		bEnableEditMode = false;
+	}
+
+	void D3D::SetImGuiImplClass(ImGuiImpl::ImGuiImplClass* imguiImplClass)
+	{
+		imguiImpl = imguiImplClass;
+	}
+
+
 	void D3D::SetGameConstData(GameConstBuffer c){ gameConstBuffer = c;}
 	void D3D::InitPlayerData(RE::PlayerCharacter* pl, RE::PlayerCamera* pc){ player = pl; pcam = pc;}
 	void D3D::SetNVG(int flag) { bEnableNVG = flag; }

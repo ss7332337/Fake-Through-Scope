@@ -8,6 +8,7 @@
 #include <d3d11.h>
 #include <DirectXMath.h>
 #include <wrl/client.h>
+#include <ImGuiImpl.h>
 #include "FTSData.h"
 
 
@@ -262,6 +263,7 @@ namespace Hook
 		void SetIsUpscaler(bool flag) { bIsUpscaler = flag; }
 		void SetIsInGame(bool flag) { bIsInGame = flag; }
 		GameConstBuffer* GetGameConstBuffer() { return &gameConstBuffer; }
+		void SetImGuiImplClass(ImGuiImpl::ImGuiImplClass* imguiImplClass);
 
 	public:
 		static bool bLegacyMode;

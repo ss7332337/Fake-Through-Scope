@@ -49,7 +49,13 @@ namespace ImGuiImpl
 
 	RE::PlayerCharacter* player;
 	RE::PlayerCamera* pcam;
+	bool bInitZoomData = false;
+	RE::TESObjectWEAP::InstanceData* Imgui_InstanceData;
 
+	void ImGuiImplClass::UpdateWeaponInstance(RE::TESObjectWEAP::InstanceData* instanceData)
+	{
+		Imgui_InstanceData = instanceData;
+	}
 
 	void ImGuiImplClass::UpdateImGuiData()
 	{
@@ -172,6 +178,9 @@ namespace ImGuiImpl
 			ins->MovePercentage_UI = data->shaderData.movePercentage;
 
 			ins->bDisableWhileBolt = data->shaderData.bBoltDisable;
+
+			ins->Imgui_ZDO = data->zoomDataOverwrite;
+
 			d3d->bRefreshChar = false;
 		}
 	}
@@ -226,6 +235,13 @@ namespace ImGuiImpl
 			currData->shaderData.rectSize[2] = Size_rect_UI[2];
 			currData->shaderData.rectSize[3] = Size_rect_UI[3];
 
+			currData->zoomDataOverwrite.enableZoomDateOverwrite = Imgui_ZDO.enableZoomDateOverwrite;
+			currData->zoomDataOverwrite.x = Imgui_InstanceData->zoomData->zoomData.cameraOffset.x;
+			currData->zoomDataOverwrite.y = Imgui_InstanceData->zoomData->zoomData.cameraOffset.y;
+			currData->zoomDataOverwrite.z = Imgui_InstanceData->zoomData->zoomData.cameraOffset.z;
+			currData->zoomDataOverwrite.fovMul = Imgui_InstanceData->zoomData->zoomData.fovMult;
+
+
 			sdh->SetCurrentFTSData(currData);
 			sdh->WriteCurrentFTSData();
 			ResetUIData(this);
@@ -276,6 +292,25 @@ namespace ImGuiImpl
 			ImGui::Text("curr Base Fov Adjust %.3f", pcam->fovAdjustCurrent);
 			ImGui::DragFloat("Base Fov Adjust ", &fovBase_UI, 0.05F);
 			ImGui::NewLine();
+
+			ImGui::Checkbox("EnableZoomDateOverwrite", &Imgui_ZDO.enableZoomDateOverwrite);
+
+
+			if (Imgui_ZDO.enableZoomDateOverwrite)
+			{
+				if (Imgui_InstanceData && Imgui_InstanceData->zoomData)
+				{
+					ImGui::DragFloat("fov mul", &Imgui_InstanceData->zoomData->zoomData.fovMult, 0.01F, 0, 30, "%.3f");
+					ImGui::DragFloat("x", &Imgui_InstanceData->zoomData->zoomData.cameraOffset.x, 0.1F, -50, 50, "%.3f");
+					ImGui::DragFloat("y", &Imgui_InstanceData->zoomData->zoomData.cameraOffset.y, 0.1F, -50, 50, "%.3f");
+					ImGui::DragFloat("z", &Imgui_InstanceData->zoomData->zoomData.cameraOffset.z, 0.1F, -50, 50, "%.3f");
+				}
+				else
+				{
+					ImGui::Text("InstanceData ERROR!");
+				}
+				
+			}
 			ImGui::TreePop();
 		}
 	}

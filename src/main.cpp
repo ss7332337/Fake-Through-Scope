@@ -56,6 +56,7 @@ RE::NiNode* scopeAimingNode3rd_i;
 
 RE::NiNode* scopeNormalNode_i;
 RE::NiNode* scopeAimingNode_i;
+RE::TESObjectWEAP::InstanceData* weaponInstanceData;
 
 PlayerControls* pc;
 HMODULE Upscaler;
@@ -76,6 +77,7 @@ const char* customPath = "Data\\F4SE\\Plugins\\FTS";
 using namespace Hook;
 
 D3D* hookIns;
+ImGuiImpl::ImGuiImplClass* imgui_Impl;
 
 char* _MESSAGE(const char* fmt, ...);
 
@@ -126,17 +128,13 @@ TESForm* GetFormFromMod(std::string modname, uint32_t formid)
 }
 
 
-void WorldToScreen_Internal(RE::NiPoint3* in, RE::NiPoint3* out)
-{
-	using func_t = decltype(&WorldToScreen_Internal);
-	REL::Relocation<func_t> func{ REL::ID(1132313) };
-	return func(in, out);
-}
-
 DWORD StartHooking(LPVOID)
 {
 	
 	hookIns = Hook::D3D::GetSington();
+	imgui_Impl = new ImGuiImpl::ImGuiImplClass();
+	hookIns->SetImGuiImplClass(imgui_Impl);
+
 	Hook::D3D::Register();
 	return 0;
 }
@@ -229,6 +227,13 @@ inline void InitCurrentScopeData()
 				sdh->SetCurrentFTSData(nullptr);
 				return;
 			}
+
+			weaponInstanceData = eventInstance;
+			if (weaponInstanceData->zoomData) 
+			{
+				imgui_Impl->UpdateWeaponInstance(weaponInstanceData);
+			}
+			
 
 			BSScrapArray<const BGSKeyword*> playerkeywords;
 			BSScrapArray<const BGSKeyword*> weaponKeywords;
@@ -462,16 +467,11 @@ void HookedUpdate()
 		NiAVObject* RealRootNode = player->Get3D(true);
 		pc = PlayerControls::GetSingleton();
 		
-		//MenuCursor::GetSingleton()->CenterCursor();
-		
-		//_MESSAGE("Menu: %s", UI::GetSingleton()->menuStack[0]->menuName.c_str());
-		//_MESSAGE("REL::ID(179769): %i", REL::ID(179769).offset());
+
 		NiPoint3 tempOut;
 		if (scopeNode && camNode) 
 		{
 			tempOut = hookIns->WorldToScreen(camNode, scopeNode, PlayerCamera::GetSingleton()->firstPersonFOV);
-			
-			//_MESSAGE("tempOut: %f, %f, %f", tempOut.x, tempOut.y, tempOut.z);
 		}
 
 		pcam = PlayerCamera::GetSingleton();
@@ -480,7 +480,6 @@ void HookedUpdate()
 
 		//_MESSAGE("\nfovAdjustCurrent: %f; fovAdjustTarget: %f; firstPersonFOV: %f; worldFOV: %f; fovAnimatorAdjust: %f",
 			//pcam->fovAdjustCurrent, pcam->fovAdjustTarget, pcam->firstPersonFOV, pcam->worldFOV, pcam->fovAnimatorAdjust);
-		
 		
 		NiPointer<bhkCharacterController> con = player->currentProcess->middleHigh->charController;
 		uintptr_t charProxy = *(uintptr_t*)((uintptr_t)con.get() + 0x470);
@@ -556,6 +555,15 @@ void HookedUpdate()
 			{
 				if (IsInADS(player)) 
 				{
+					if (!hookIns->bEnableEditMode) 
+					{
+						auto tempZDO = currentData->zoomDataOverwrite;
+						if (tempZDO.enableZoomDateOverwrite && weaponInstanceData) {
+							weaponInstanceData->zoomData->zoomData.fovMult = tempZDO.fovMul;
+							weaponInstanceData->zoomData->zoomData.cameraOffset = { tempZDO.x, tempZDO.y, tempZDO.z };
+						}
+					} 
+
 					hookIns->EnableRender(true);
 					hookIns->QueryRender(true);
 				}
