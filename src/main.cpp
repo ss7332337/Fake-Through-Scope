@@ -139,6 +139,10 @@ DWORD StartHooking(LPVOID)
 	return 0;
 }
 
+bool compareByEditorID(const string& a, const BGSKeyword* b)
+{
+	return a == b->formEditorID || a.empty();
+}
 
 bool IssueChangeAnim(std::monostate, BGSKeyword* keyword)
 {
@@ -150,6 +154,12 @@ bool IssueChangeAnim(std::monostate, BGSKeyword* keyword)
 
 bool TestButton(std::monostate)
 {
+	BSScrapArray<const BGSKeyword*> playerkeywords;
+	player->CollectAllKeywords(playerkeywords, nullptr);
+
+	for (auto& p : playerkeywords) {
+		_MESSAGE("%s", p->formEditorID.c_str());
+	}
 	return true;
 }
 
@@ -233,7 +243,6 @@ inline void InitCurrentScopeData()
 			{
 				imgui_Impl->UpdateWeaponInstance(weaponInstanceData);
 			}
-			
 
 			BSScrapArray<const BGSKeyword*> playerkeywords;
 			BSScrapArray<const BGSKeyword*> weaponKeywords;
@@ -258,19 +267,33 @@ inline void InitCurrentScopeData()
 			if (it != ScopeDataMap->end()) {
 				auto ftsData = it->second;
 				auto qbzAni = IsMagnifier();
+				
+				bool additionalKeywordsResult = true;
+				for (const auto& s : ftsData->additionalKeywords) {
+					if (!eventInstance->keywords->HasKeywordString(s))
+					{
+						additionalKeywordsResult=false;
+						break;
+					}
+				}
+
+				if (!additionalKeywordsResult) 
+				{
+					sdh->SetCurrentFTSData(ftsData, false);
+					return;
+				}
 
 				auto animFlavorKeyword = qbzAni ? std::string(qbzAni->formEditorID.c_str()) : std::string(it->second->animFlavorEditorID.c_str());
 
 				if (animFlavorKeyword.empty() || std::strcmp(animFlavorKeyword.c_str(), "FTS_NONE") == 0) {
 					sdh->SetCurrentFTSData(ftsData);
 					return;
-				} else {
-
-					auto aniResult = std::find_if(playerkeywords.begin(), playerkeywords.end(), [&animFlavorKeyword](const BGSKeyword* p) {
-						return !std::strcmp(p->formEditorID.c_str(), animFlavorKeyword.c_str());
-					});
-
-					if (aniResult != playerkeywords.end())
+				} 
+				else 
+				{
+					BGSKeyword* tempKeyword = (BGSKeyword*)TESForm::GetFormByEditorID(animFlavorKeyword.c_str());
+					
+					if (player->HasKeyword(tempKeyword))
 						sdh->SetCurrentFTSData(ftsData);
 					else
 						sdh->SetCurrentFTSData(nullptr);
@@ -307,13 +330,13 @@ public:
 				id += 0x100;
 			if (evn->device == INPUT_DEVICE::kGamepad)
 				id += 0x10000;
-#ifdef Debug
-			if (evn->device == INPUT_DEVICE::kKeyboard && id == VK_OEM_PERIOD && evn->JustPressed()) {
-				std::monostate mono;
-				TestButton(mono);
-			}
-#endif 
-			
+
+			//if (evn->device == INPUT_DEVICE::kKeyboard && id == VK_OEM_PERIOD && evn->QJustPressed()) {
+			//	std::monostate mono;
+			//	TestButton(mono);
+			//}
+
+
 			if (evn->device == INPUT_DEVICE::kKeyboard) {
 
 
@@ -445,6 +468,7 @@ void HandleScopeNode()
 }
 
 bool isUpdateContext = false;
+bool isFirstEquip = true;
 
 namespace F4
 {
@@ -458,6 +482,9 @@ namespace F4
 
 float timerA = 0;
 
+
+BSScrapArray<const BGSKeyword*> lastKeywords = BSScrapArray<const BGSKeyword*>();
+
 void HookedUpdate()
 {
 	if (InGameFlag&& player && player->Get3D(true)) {
@@ -466,9 +493,24 @@ void HookedUpdate()
 		rootNode = player->Get3D(true)->GetObjectByName("RArm_UpperArm");
 		NiAVObject* RealRootNode = player->Get3D(true);
 		pc = PlayerControls::GetSingleton();
+		NiPoint3 tempOut;
+
+
+		if (!isFirstEquip)
+		{
+			BSScrapArray<const BGSKeyword*> currkeywords;
+			player->CollectAllKeywords(currkeywords, nullptr);
+
+			if (lastKeywords.empty() || lastKeywords != currkeywords) {
+				InitCurrentScopeData();
+				lastKeywords = currkeywords;
+			}
+		}
 		
 
-		NiPoint3 tempOut;
+		if (!currentData)
+			return;
+
 		if (scopeNode && camNode) 
 		{
 			tempOut = hookIns->WorldToScreen(camNode, scopeNode, PlayerCamera::GetSingleton()->firstPersonFOV);
@@ -567,7 +609,6 @@ void HookedUpdate()
 					hookIns->EnableRender(true);
 					hookIns->QueryRender(true);
 				}
-				
 			}
 
 			if (!IsInADS(player))
@@ -796,6 +837,7 @@ void ResetScopeStatus()
 	InGameFlag = true;
 	hookIns->SetIsInGame(InGameFlag);
 	hookIns->SetInterfaceTextRefresh(true);
+	isFirstEquip = false;
 }
 
 
@@ -830,7 +872,7 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a
 	spdlog::set_default_logger(std::move(log));
 	spdlog::set_pattern("%g(%#): [%^%l%$] %v"s);
 
-	logger::info(FMT_STRING("{} v0.8.3"), Version::PROJECT);
+	logger::info(FMT_STRING("{} v0.9.0"), Version::PROJECT);
 
 	a_info->infoVersion = F4SE::PluginInfo::kVersion;
 	a_info->name = Version::PROJECT.data();
@@ -847,24 +889,14 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a
 		return false;
 	}
 
-	/*hookIns = Hook::D3D::GetSington();
-	Hook::D3D::Register();*/
 
-	logger::info(FMT_STRING("{} v0.9.0"), Version::PROJECT);
 	HANDLE hThread = CreateThread(NULL, 0, StartHooking, (HMODULE)F4SE::WinAPI::GetCurrentModule(), 0, NULL);
+	/*hookIns = Hook::D3D::GetSington();
+	imgui_Impl = new ImGuiImpl::ImGuiImplClass();
 
-	/*hookIns = &Hook::D3D::GetSington();
+	hookIns->SetImGuiImplClass(imgui_Impl);
+
 	Hook::D3D::Register();*/
-
-	/*if (!isUpdateContext) {
-		auto rendererData = BSGraphics::RendererData::GetSingleton();
-		auto device0 = rendererData->device;
-		auto context0 = rendererData->context;
-
-		hookIns->InstallDrawIndexedHook(rendererData->device, rendererData->context);
-		isUpdateContext = true;
-	}
-	*/
 
 	
 	F4SE::AllocTrampoline(8 * 8);

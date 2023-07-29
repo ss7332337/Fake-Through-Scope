@@ -98,6 +98,15 @@ namespace ScopeData
 	{
 		f.keywordName = j.value("keywordEditorID", "FTS_Default");
 		f.animFlavorEditorID = j.value("AnimFlavorKeywordEditorID", "FTS_NONE");
+		f.additionalKeywordsStr = j.value("AdditionalKeywords", "");
+
+		std::stringstream ss(f.additionalKeywordsStr);
+		std::string token;
+		while (getline(ss, token, ','))
+		{
+			f.additionalKeywords.push_back(token);
+		}
+
 		f.legacyMode = j.value("LegacyMode", true);
 		f.version = j.value("Version", 1);
 		f.UsingSTS = j.value("UsingSTS", false);
@@ -162,9 +171,19 @@ namespace ScopeData
 	// 为FTSData类型定义to_json函数
 	void to_json(json& j, const FTSData& f)
 	{
+		std::ostringstream oss;
+		for (int i = 0; i < f.additionalKeywords.size(); i++)
+		{
+			oss << f.additionalKeywords[i];
+			if (i < f.additionalKeywords.size() - 1)
+				oss << ",";
+		}
+		std::string tempkeyStr = oss.str();
+
 		j = json{
 			{ "keywordEditorID", f.keywordName },
 			{ "AnimFlavorKeywordEditorID", f.animFlavorEditorID },
+			{ "AdditionalKeywords", tempkeyStr },
 			{ "LegacyMode", f.legacyMode },
 			{ "path", f.path },
 			{ "Version", f.version },
@@ -222,9 +241,11 @@ namespace ScopeData
 
 	}
 
-	void ScopeDataHandler::SetCurrentFTSData(FTSData* data)
+	void ScopeDataHandler::SetCurrentFTSData(FTSData* data,bool containsAllAdditionkeyword)
 	{
 		currentData = data;
+		if (data)
+			data->containAlladditionalKeywords = containsAllAdditionkeyword;
 	}
 
 	FTSData* ScopeDataHandler::GetCurrentFTSData()
@@ -539,6 +560,8 @@ namespace ScopeData
 		f.close();
 		o.close();
 	}
+
+
 
 	std::vector<std::string_view> splitSV(std::string_view strv, std::string_view delims)
 	{

@@ -193,7 +193,7 @@ namespace ImGuiImpl
 
 		ScopeData::ZoomDataOverwrite Imgui_ZDO;
 		ScopeData::ZoomDataOverwrite ori_ZDO;
-
+		
 
 		bool bLegacyMode;
 		bool UsingSTS_UI;

@@ -1129,9 +1129,18 @@ namespace Hook
 
 	void D3D::Render()
 	{
-		assert(g_Context);
+		
+
+		if (!g_Swapchain || !g_Device || !g_Context)
+		{
+			g_Swapchain = RE::BSGraphics::RendererData::GetSingleton()->renderWindow->swapChain;
+			g_Device = RE::BSGraphics::RendererData::GetSingleton()->device;
+			g_Context = RE::BSGraphics::RendererData::GetSingleton()->context;
+		}
+
 		assert(g_Swapchain);
 		assert(g_Device);
+		assert(g_Context);
 
 		if (bQueryRender) {
 
@@ -1139,9 +1148,9 @@ namespace Hook
 			if (!bHasGetBackBuffer) 
 			{
 				//IDXGISwapChain* mSwapChain = RE::BSGraphics::RendererData::GetSingleton()->renderWindow->swapChain;
-				IDXGISwapChain1* mSwapChain;
+				//IDXGISwapChain1* mSwapChain;
 
-				g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain));
+				//g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain));
 				g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain3));
 				
 				HR(g_Swapchain->GetBuffer(0, IID_PPV_ARGS(&mBackBuffer)));
@@ -1171,7 +1180,7 @@ namespace Hook
 
 				auto currData = sdh->GetCurrentFTSData();
 
-				if (!currData)
+				if (!currData || !currData->containAlladditionalKeywords)
 					return;
 
 				g_Context->OMGetRenderTargets(1, &tempRt, &tempSV);
@@ -1212,8 +1221,12 @@ namespace Hook
 		}
 		if (isShow) {
 			GetSington()->RenderImGui();
-			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+			while (!ImGui::GetDrawData())
+			{
+				GetSington()->RenderImGui();
+			}
 
+			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 		}
 		auto thr = oldFuncs.d3dPresent(pSwapChain, SyncInterval, Flags);
 		return thr;

@@ -76,6 +76,11 @@ namespace ScopeData
 		int version = 1;
 		std::string keywordName = "FTS_Default";
 		std::string animFlavorEditorID = "FTS_NONE";
+		std::string additionalKeywordsStr;
+		std::vector<std::string> additionalKeywords = std::vector<std::string>();
+
+		bool containAlladditionalKeywords = true;
+
 		bool UsingSTS = false;
 		unsigned int scopeFrame = 1;
 		std::string ZoomNodePath;
@@ -105,7 +110,7 @@ namespace ScopeData
 		void WriteCurrentFTSData();
 		void ReloadCurrentFTSData();
 
-		void SetCurrentFTSData(FTSData* data);
+		void SetCurrentFTSData(FTSData* data, bool containsAllAdditionkeyword = true);
 		FTSData* GetCurrentFTSData();
 
 		int GetEffectIndex();

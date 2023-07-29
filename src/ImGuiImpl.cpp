@@ -5,13 +5,12 @@
 #include <DirectXMath.h>
 
 
-
-inline void InitCurrentScopeData(RE::BGSKeyword* animFlavorKeyword);
 inline void InitCurrentScopeData();
 
 namespace ImGuiImpl
 {
-
+	std::vector<std::string> additionalKeywords;
+	int additionalKeywords_count = 0;
 	bool legacyFlag = true;
 
 #define LF(f) (legacyFlag ? (f) : (f) / 1000.0f)
@@ -181,6 +180,9 @@ namespace ImGuiImpl
 
 			ins->Imgui_ZDO = data->zoomDataOverwrite;
 
+			additionalKeywords_count = data->additionalKeywords.size();
+			additionalKeywords = data->additionalKeywords;
+
 			d3d->bRefreshChar = false;
 		}
 	}
@@ -241,6 +243,7 @@ namespace ImGuiImpl
 			currData->zoomDataOverwrite.z = Imgui_InstanceData->zoomData->zoomData.cameraOffset.z;
 			currData->zoomDataOverwrite.fovMul = Imgui_InstanceData->zoomData->zoomData.fovMult;
 
+			currData->additionalKeywords = additionalKeywords;
 
 			sdh->SetCurrentFTSData(currData);
 			sdh->WriteCurrentFTSData();
@@ -283,7 +286,8 @@ namespace ImGuiImpl
 
 	void ImGuiImplClass::MainMenuSection()
 	{
-		if (ImGui::TreeNode("Main Menu")) {
+		if (ImGui::TreeNode("Main Menu")) 
+		{
 			ImGui::Checkbox("Legacy Mode", &bLegacyMode);
 			ImGui::Checkbox("Disable Culling", &UsingSTS_UI);
 			ImGui::Checkbox("Disable Scope Effect While Bolt", &bDisableWhileBolt);
@@ -293,9 +297,32 @@ namespace ImGuiImpl
 			ImGui::DragFloat("Base Fov Adjust ", &fovBase_UI, 0.05F);
 			ImGui::NewLine();
 
-			ImGui::Checkbox("EnableZoomDateOverwrite", &Imgui_ZDO.enableZoomDateOverwrite);
+			if (ImGui::TreeNode("Additional Keywords"))
+			{
+				ImGui::InputInt("Additional Keywords Count", &additionalKeywords_count);
 
+				if (additionalKeywords_count < additionalKeywords.size())
+					additionalKeywords.pop_back();
 
+				additionalKeywords_count = max(0, min(100, additionalKeywords_count));
+
+				for (int i = 0; i < additionalKeywords_count; i++) {
+					std::string label = "keyword " + std::to_string(i);
+
+					std::string text = i < additionalKeywords.size() ? additionalKeywords[i] : "";
+					ImGui::InputTextWithHint(label.c_str(), "Must be saved to take effect", &text);
+
+					if (i < additionalKeywords.size())
+						additionalKeywords[i] = text;
+					else
+						additionalKeywords.push_back(text);
+				}
+				ImGui::TreePop();
+			}
+
+			ImGui::NewLine();
+
+			ImGui::Checkbox("Enable ZoomData Overwrite", &Imgui_ZDO.enableZoomDateOverwrite);
 			if (Imgui_ZDO.enableZoomDateOverwrite)
 			{
 				if (Imgui_InstanceData && Imgui_InstanceData->zoomData)
@@ -339,6 +366,7 @@ namespace ImGuiImpl
 			ImGui::DragFloat("Min Zoom", &minZoom_UI, 0.01F, 0, 15);
 			ImGui::DragFloat("Max Zoom", &maxZoom_UI, 0.01F, 0, 15);
 			ImGui::NewLine();
+
 			if (bLegacyMode)
 				ImGui::DragFloat2("Dest Pos Offset", PositionOffset_UI, 0.1F, -3840, 3840);
 			else
