@@ -468,7 +468,6 @@ void HandleScopeNode()
 }
 
 bool isUpdateContext = false;
-bool isFirstEquip = true;
 
 namespace F4
 {
@@ -495,21 +494,16 @@ void HookedUpdate()
 		pc = PlayerControls::GetSingleton();
 		NiPoint3 tempOut;
 
-
-		if (!isFirstEquip)
-		{
-			BSScrapArray<const BGSKeyword*> currkeywords;
-			player->CollectAllKeywords(currkeywords, nullptr);
-
-			if (lastKeywords.empty() || lastKeywords != currkeywords) {
-				InitCurrentScopeData();
-				lastKeywords = currkeywords;
-			}
-		}
-		
-
 		if (!currentData)
 			return;
+
+		BSScrapArray<const BGSKeyword*> currkeywords;
+		player->CollectAllKeywords(currkeywords, nullptr);
+		if (lastKeywords.empty() || lastKeywords != currkeywords) {
+			InitCurrentScopeData();
+			lastKeywords = currkeywords;
+		}
+
 
 		if (scopeNode && camNode) 
 		{
@@ -837,7 +831,6 @@ void ResetScopeStatus()
 	InGameFlag = true;
 	hookIns->SetIsInGame(InGameFlag);
 	hookIns->SetInterfaceTextRefresh(true);
-	isFirstEquip = false;
 }
 
 
