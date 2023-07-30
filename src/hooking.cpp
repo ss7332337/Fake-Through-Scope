@@ -295,8 +295,6 @@ namespace Hook
 		return arrNew;
 	}
 
-
-
 	const wchar_t* GetWC(const char* c)
 	{
 		size_t len = strlen(c) + 1;
@@ -353,6 +351,7 @@ namespace Hook
 
 		e = enable;
 	}
+
 	LRESULT __stdcall D3D::WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		switch (msg) {
@@ -390,7 +389,6 @@ namespace Hook
 	
 		return CallWindowProc(oldFuncs.wndProc,hWnd, msg, wParam, lParam);
 	}
-
 
 	XMMATRIX GetProjectionMatrix(float fov)
 	{
@@ -715,12 +713,15 @@ namespace Hook
 		
 	}
 
+	IDXGISwapChain3* mSwapChain3;
+	bool InitWndHandler = false;
+
 	ID3D11RenderTargetView* tempRt;
 	ID3D11DepthStencilView* tempSV;
 
 	ID3D11RenderTargetView* tempRt1;
 	ID3D11DepthStencilView* tempSV1;
-
+	
 	bool bHasGrab = false;
 
 	int myDrawCount = 0;
@@ -1029,11 +1030,6 @@ namespace Hook
 	void D3D::MapScopeEffectBuffer(ScopeEffectShaderData data)
 	{
 		scopeData = data;
-
-		/*D3D11_MAPPED_SUBRESOURCE mappedDataA;
-		HR(g_Context->Map(m_pScopeEffectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataA));
-		memcpy_s(mappedDataA.pData, sizeof(ScopeEffectShaderData), &data, sizeof(ScopeEffectShaderData));
-		g_Context->Unmap(m_pScopeEffectBuffer.Get(), 0);*/
 	}
 
 	static int copyCount = 0;
@@ -1125,11 +1121,8 @@ namespace Hook
 		return oldFuncs.drawIndexed(pContext, IndexCount, StartIndexLocation, BaseVertexLocation);
 	}
 
-	IDXGISwapChain3* mSwapChain3;
-
 	void D3D::Render()
 	{
-		
 
 		if (!g_Swapchain || !g_Device || !g_Context)
 		{
@@ -1147,10 +1140,6 @@ namespace Hook
 
 			if (!bHasGetBackBuffer) 
 			{
-				//IDXGISwapChain* mSwapChain = RE::BSGraphics::RendererData::GetSingleton()->renderWindow->swapChain;
-				//IDXGISwapChain1* mSwapChain;
-
-				//g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain));
 				g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain3));
 				
 				HR(g_Swapchain->GetBuffer(0, IID_PPV_ARGS(&mBackBuffer)));
@@ -1214,19 +1203,20 @@ namespace Hook
 	HRESULT __stdcall D3D::PresentHook(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
 	{
 
-		bSelfDraw = false;
-		if (!isActive_TAA)
-		{
-			//instance.Render();
+		if (!InitWndHandler) {
+			g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain3));
+			DXGI_SWAP_CHAIN_DESC sd;
+			mSwapChain3->GetDesc(&sd);
+			oldFuncs.wndProc = (WNDPROC)SetWindowLongPtr(sd.OutputWindow, GWLP_WNDPROC, (LONG_PTR)WndProcHandler);
+
+			InitWndHandler = true;
 		}
+
+		bSelfDraw = false;
 		if (isShow) {
 			GetSington()->RenderImGui();
-			while (!ImGui::GetDrawData())
-			{
-				GetSington()->RenderImGui();
-			}
-
-			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+			if (ImGui::GetDrawData())
+				ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 		}
 		auto thr = oldFuncs.d3dPresent(pSwapChain, SyncInterval, Flags);
 		return thr;
@@ -1241,8 +1231,6 @@ namespace Hook
 	{
 		static void thunk(uint64_t This, uint64_t a2, uint64_t a3)
 		{
-
-			
 			func(This, a2, a3);
 			GetSington()->Render();
 
@@ -1353,7 +1341,9 @@ namespace Hook
 
 	bool D3D::Register() noexcept
 	{
+
 		HookImportFunc("d3d11.dll", "D3D11CreateDeviceAndSwapChain", oldFuncs.d3dCreateDevice, (std::uintptr_t)D3D11CreateDeviceAndSwapChainHook);
+
 
 		HookImportFunc("User32.dll", "ClipCursor", oldFuncs.clipCursor, (std::uintptr_t)ClipCursorHook);
 
@@ -1405,7 +1395,6 @@ namespace Hook
 
 		std::uintptr_t* vtbl2 = (std::uintptr_t*)(*ppDevice);
 		vtbl2 = (std::uintptr_t*)vtbl2[0];
-		//HookFunc(vtbl2, 3, (std::uintptr_t)CreateBufferHook, (std::uintptr_t*)&oldFuncs.createBuffer);
 
 		std::uintptr_t* vtbl = (std::uintptr_t*)(g_Context.Get());
 		vtbl = (std::uintptr_t*)vtbl[0];
@@ -1413,6 +1402,8 @@ namespace Hook
 		//won't work without a modified dxgi.dll or d3d11.dll
 		HookFunc(vtbl, 12, (std::uintptr_t)DrawIndexedHook, (std::uintptr_t*)&oldFuncs.drawIndexed);
 
+		DXGI_SWAP_CHAIN_DESC sd;
+		g_Swapchain->GetDesc(&sd);
 		IDXGISwapChain3* mSwapChain;
 		g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain));
 		UINT backBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
@@ -1420,18 +1411,13 @@ namespace Hook
 
 		D3D11_TEXTURE2D_DESC realTexDesc;
 
-		DXGI_SWAP_CHAIN_DESC sd;
-		g_Swapchain->GetDesc(&sd);
-
 		GetSington()->mRealBackBuffer->GetDesc(&realTexDesc);
-
-		oldFuncs.wndProc = (WNDPROC)GetWindowLongPtr(sd.OutputWindow, GWLP_WNDPROC);
-		SetWindowLongPtr(sd.OutputWindow, GWLP_WNDPROC, (LONG_PTR)WndProcHandler);
-
 		::GetWindowRect(sd.OutputWindow, &oldRect);
 
+		/////////////////////
+
 		/*windowWidth = RE::BSGraphics::RendererData::GetSingleton()->renderWindow->windowWidth;
-				windowHeight = RE::BSGraphics::RendererData::GetSingleton()->renderWindow->windowHeight;*/
+		windowHeight = RE::BSGraphics::RendererData::GetSingleton()->renderWindow->windowHeight;*/
 
 		windowWidth = realTexDesc.Width;
 		windowHeight = realTexDesc.Height;

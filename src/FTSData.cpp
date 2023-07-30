@@ -313,9 +313,7 @@ namespace ScopeData
 	bool* ScopeDataHandler::GetEnableRenderThroughUI()
 	{
 		
-		if (isUpscaler)
-			bEnableRenderBeforeUI = false;
-		return &bEnableRenderBeforeUI;
+		return &isUpscaler;
 	}
 
 	void ScopeDataHandler::SaveEnableRenderBeforeUI(bool flag)

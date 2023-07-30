@@ -130,10 +130,11 @@ TESForm* GetFormFromMod(std::string modname, uint32_t formid)
 
 DWORD StartHooking(LPVOID)
 {
-	
 	hookIns = Hook::D3D::GetSington();
 	imgui_Impl = new ImGuiImpl::ImGuiImplClass();
 	hookIns->SetImGuiImplClass(imgui_Impl);
+	Upscaler = GetModuleHandleA("Fallout4Upscaler.dll");
+	hookIns->SetIsUpscaler(Upscaler);
 
 	Hook::D3D::Register();
 	return 0;
@@ -455,7 +456,6 @@ void HandleScopeNode()
 
 					} else {
 						scopeNormalNode_i->SetAppCulled(false);
-						//setbit(scopeAimingNode_i->flags.flags, 1);
 						scopeAimingNode_i->SetAppCulled(true);
 					}
 				} else {
@@ -512,11 +512,6 @@ void HookedUpdate()
 
 		pcam = PlayerCamera::GetSingleton();
 
-		
-
-		//_MESSAGE("\nfovAdjustCurrent: %f; fovAdjustTarget: %f; firstPersonFOV: %f; worldFOV: %f; fovAnimatorAdjust: %f",
-			//pcam->fovAdjustCurrent, pcam->fovAdjustTarget, pcam->firstPersonFOV, pcam->worldFOV, pcam->fovAnimatorAdjust);
-		
 		NiPointer<bhkCharacterController> con = player->currentProcess->middleHigh->charController;
 		uintptr_t charProxy = *(uintptr_t*)((uintptr_t)con.get() + 0x470);
 		hkTransform* charProxyTransform = (hkTransform*)(charProxy + 0x40);
@@ -807,10 +802,6 @@ void InitializePlugin()
 
 	EquipWatcher* ew = new EquipWatcher();
 	EquipEventSource::GetSingleton()->RegisterSink(ew);
-
-	Upscaler = GetModuleHandleA("Fallout4Upscaler.dll");
-
-	hookIns->SetIsUpscaler(Upscaler);
 	sdh->SetIsUpscaler(Upscaler);
 	hookIns->QueryChangeReticleTexture();
 	sdh->ReadCustomScopeDataFiles(customPath);
