@@ -9,3 +9,6 @@
 /src/Utilities.h
 /src/InputUtil.h
 /src/InputUtil.cpp
+/src/HLSL/canying.hlsl
+/src/Hotkey.h
+/src/Hotkey.cpp
