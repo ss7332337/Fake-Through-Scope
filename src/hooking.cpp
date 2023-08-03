@@ -1217,6 +1217,21 @@ namespace Hook
 			GetSington()->RenderImGui();
 			if (ImGui::GetDrawData())
 				ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+			else
+			{
+				g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain3));
+				DXGI_SWAP_CHAIN_DESC sd;
+				mSwapChain3->GetDesc(&sd);
+				ImGui::CreateContext();
+				ImGuiIO& io = ImGui::GetIO();
+				(void)io;
+
+				ImGui::StyleColorsDark();
+
+				IMGUI_CHECKVERSION();
+				ImGui_ImplWin32_Init(sd.OutputWindow);
+				ImGui_ImplDX11_Init((g_Device.Get()), (g_Context.Get()));
+			}
 		}
 		auto thr = oldFuncs.d3dPresent(pSwapChain, SyncInterval, Flags);
 		return thr;

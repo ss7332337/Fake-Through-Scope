@@ -130,6 +130,7 @@ TESForm* GetFormFromMod(std::string modname, uint32_t formid)
 
 DWORD StartHooking(LPVOID)
 {
+	Sleep(100);
 	hookIns = Hook::D3D::GetSington();
 	imgui_Impl = new ImGuiImpl::ImGuiImplClass();
 	hookIns->SetImGuiImplClass(imgui_Impl);
@@ -268,6 +269,15 @@ inline void InitCurrentScopeData()
 			if (it != ScopeDataMap->end()) {
 				auto ftsData = it->second;
 				auto qbzAni = IsMagnifier();
+
+				if (qbzAni != nullptr)
+				{
+					_MESSAGE("IsMagnifier = true");
+				}
+				else
+				{
+					_MESSAGE("IsMagnifier = false");
+				}
 				
 				bool additionalKeywordsResult = true;
 				for (const auto& s : ftsData->additionalKeywords) {
@@ -469,16 +479,6 @@ void HandleScopeNode()
 
 bool isUpdateContext = false;
 
-namespace F4
-{
-	void ApplyImageSpaceModifier(TESImageSpaceModifier* imod, float strength, NiAVObject* target)
-	{
-		using func_t = decltype(&F4::ApplyImageSpaceModifier);
-		REL::Relocation<func_t> func{ REL::ID(179769) };
-		return func(imod, strength, target);
-	}
-}
-
 float timerA = 0;
 
 
@@ -487,23 +487,27 @@ BSScrapArray<const BGSKeyword*> lastKeywords = BSScrapArray<const BGSKeyword*>()
 void HookedUpdate()
 {
 	if (InGameFlag&& player && player->Get3D(true)) {
+
+		if (!bHasStartedScope)
+		{
+			BSScrapArray<const BGSKeyword*> currkeywords;
+			player->CollectAllKeywords(currkeywords, nullptr);
+			if (lastKeywords.empty() || lastKeywords != currkeywords) {
+				InitCurrentScopeData();
+				lastKeywords = currkeywords;
+			}
+		}
+		
+
+		if (!currentData)
+			return;
+
 		scopeNode = player->Get3D(true)->GetObjectByName("FTS:CenterPoint");
 		camNode = player->Get3D(true)->GetObjectByName("Camera");
 		rootNode = player->Get3D(true)->GetObjectByName("RArm_UpperArm");
 		NiAVObject* RealRootNode = player->Get3D(true);
 		pc = PlayerControls::GetSingleton();
 		NiPoint3 tempOut;
-
-		if (!currentData)
-			return;
-
-		BSScrapArray<const BGSKeyword*> currkeywords;
-		player->CollectAllKeywords(currkeywords, nullptr);
-		if (lastKeywords.empty() || lastKeywords != currkeywords) {
-			InitCurrentScopeData();
-			lastKeywords = currkeywords;
-		}
-
 
 		if (scopeNode && camNode) 
 		{

@@ -293,8 +293,8 @@ namespace ImGuiImpl
 			ImGui::Checkbox("Disable Scope Effect While Bolt", &bDisableWhileBolt);
 			ImGui::DragInt("Effect Delay(ms)", (int*)&scopeFrame_UI, 1, 0, 5000);
 
-			ImGui::Text("curr Base Fov Adjust %.3f", pcam->fovAdjustCurrent);
-			ImGui::DragFloat("Base Fov Adjust ", &fovBase_UI, 0.05F);
+			/*ImGui::Text("curr Base Fov Adjust %.3f", pcam->fovAdjustCurrent);
+			ImGui::DragFloat("Base Fov Adjust ", &fovBase_UI, 0.05F);*/
 			ImGui::NewLine();
 
 			if (ImGui::TreeNode("Additional Keywords"))
@@ -402,10 +402,10 @@ namespace ImGuiImpl
 	void ImGuiImplClass::ParallaxDataSection()
 	{
 		if (ImGui::TreeNode("Parallax Data")) {
-			ImGui::DragFloat("Radius", &radius_UI, 0.01F, 0, 15);
-			ImGui::DragFloat("RelativeFog Radius", &relativeFogRadius_UI, 0.01F, 0, 15);
-			ImGui::DragFloat("Scope Sway Amount", &scopeSwayAmount_UI, 0.01F, 0, 15);
-			ImGui::DragFloat("Max Travel", &maxTravel_UI, 0.01F, 0, 15);
+			ImGui::DragFloat("Radius", &radius_UI, 0.01F, 0, 20);
+			ImGui::DragFloat("RelativeFog Radius", &relativeFogRadius_UI, 0.01F, 0, 20);
+			ImGui::DragFloat("Scope Sway Amount", &scopeSwayAmount_UI, 0.01F, 0, 20);
+			ImGui::DragFloat("Max Travel", &maxTravel_UI, 0.01F, 0, 20);
 			ImGui::NewLine();
 			ImGui::TreePop();
 		}
