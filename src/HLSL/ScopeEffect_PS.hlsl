@@ -20,16 +20,16 @@ float4 main(float4 vpos : SV_Position, float2 texcoord : TEXCOORD0) : SV_Target
 	float2 mulTex = (texcoord - float2(0.5,0.5)) * rcp((ScopeEffect_Zoom) ) + float2(0.5,0.5);
 	float4 color = tBACKBUFFER.Sample(gSamLinear, mulTex);
 	
-    float2 parallax_offset = float2(0.5 + eye_velocity.x  , 0.5 - eye_velocity.y);
-	float distToParallax = distance(adjTex, parallax_offset);
-	float2 scope_center = float2(0.5,0.5) + ScopeEffect_Offset;
-	float distToCenter = distance(adjTex, scope_center);
-
 	float2 ReticleCoord = aspect_ratio_correction(texcoord);
 	ReticleCoord = ((ReticleCoord - float2(0.5,0.5)) * 16 *rcp(ReticleSize)) + float2(0.5,0.5);
 
 	float4 ReticleColor = ReticleTex.Sample(gSamLinear,ReticleCoord);
 	color = ReticleColor * ReticleColor.a + color * (1-ReticleColor.a);
+
+	float2 parallax_offset = float2(0.5 + eye_velocity.x  , 0.5 - eye_velocity.y);
+	float distToParallax = distance(adjTex, parallax_offset);
+	float2 scope_center = float2(0.5,0.5) + ScopeEffect_Offset;
+	float distToCenter = distance(adjTex, scope_center);
 
 	float4 nColor = EnableNV * NVGEffect(color, texcoord);
 	color = nColor * nColor.a + color * (1 - nColor.a);

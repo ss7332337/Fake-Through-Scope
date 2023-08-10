@@ -418,7 +418,7 @@ namespace Hook
 
 		auto worldSpacePoint = camRot * (objTrans - camTrans);
 
-		XMMATRIX projectionMatrix = GetProjectionMatrix(fov);
+		XMMATRIX projectionMatrix = GetProjectionMatrix(90);
 
 		XMVECTOR clipPosition = XMVectorSet(worldSpacePoint.x, worldSpacePoint.y, worldSpacePoint.z, 1.0f);
 		clipPosition = XMVector4Transform(clipPosition, projectionMatrix);  // Apply projection matrix
@@ -977,6 +977,7 @@ namespace Hook
 	{
 		if (targetVS.Get() && targetVertexConstBufferOutPut)
 		{
+			
 			g_Context->OMSetRenderTargets(1, m_pRenderTargetView.GetAddressOf(), nullptr);
                                           
 			g_Context->CopyResource(m_DstTexture, mRTRenderTargetTexture.Get());
@@ -1158,6 +1159,7 @@ namespace Hook
 
 			if (isEnableRender && pcam && player)
 			{
+				_MESSAGE("isEnableRender && pcam && player");
 				if (bIsFirst) 
 				{
 					OnResize();
@@ -1171,6 +1173,8 @@ namespace Hook
 
 				if (!currData || !currData->containAlladditionalKeywords)
 					return;
+
+				_MESSAGE("currData && currData->containAlladditionalKeywords");
 
 				g_Context->OMGetRenderTargets(1, &tempRt, &tempSV);
 
@@ -1192,7 +1196,14 @@ namespace Hook
 	
 	void D3D::RenderImGui()
 	{
+		ImGui_ImplDX11_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+		ImGui::NewFrame();
+
 		imguiImpl->RenderImgui();
+
+		ImGui::End();
+		ImGui::Render();
 	}
 
 	inline void** get_vtable_ptr(void* obj)
@@ -1204,9 +1215,11 @@ namespace Hook
 	{
 
 		if (!InitWndHandler) {
-			g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain3));
+			_MESSAGE("InitWndHandler");
+			//g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain3));
+
 			DXGI_SWAP_CHAIN_DESC sd;
-			mSwapChain3->GetDesc(&sd);
+			g_Swapchain->GetDesc(&sd);
 			oldFuncs.wndProc = (WNDPROC)SetWindowLongPtr(sd.OutputWindow, GWLP_WNDPROC, (LONG_PTR)WndProcHandler);
 
 			InitWndHandler = true;
@@ -1215,22 +1228,12 @@ namespace Hook
 		bSelfDraw = false;
 		if (isShow) {
 			GetSington()->RenderImGui();
+
 			if (ImGui::GetDrawData())
 				ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 			else
 			{
-				g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain3));
-				DXGI_SWAP_CHAIN_DESC sd;
-				mSwapChain3->GetDesc(&sd);
-				ImGui::CreateContext();
-				ImGuiIO& io = ImGui::GetIO();
-				(void)io;
-
-				ImGui::StyleColorsDark();
-
-				IMGUI_CHECKVERSION();
-				ImGui_ImplWin32_Init(sd.OutputWindow);
-				ImGui_ImplDX11_Init((g_Device.Get()), (g_Context.Get()));
+				_MESSAGE("Can't Get DrawData. ReIniting");
 			}
 		}
 		auto thr = oldFuncs.d3dPresent(pSwapChain, SyncInterval, Flags);
@@ -1354,11 +1357,11 @@ namespace Hook
 		return &instance;
 	}
 
+
 	bool D3D::Register() noexcept
 	{
 
 		HookImportFunc("d3d11.dll", "D3D11CreateDeviceAndSwapChain", oldFuncs.d3dCreateDevice, (std::uintptr_t)D3D11CreateDeviceAndSwapChainHook);
-
 
 		HookImportFunc("User32.dll", "ClipCursor", oldFuncs.clipCursor, (std::uintptr_t)ClipCursorHook);
 
@@ -1368,7 +1371,7 @@ namespace Hook
 		write_vfunc<0x8, ImageSpaceEffectTemporalAA_IsActive>(RE::VTABLE::ImageSpaceEffectTemporalAA[0].address());
 		write_vfunc<0x8, ImageSpaceEffectBokehDepthOfField_IsActive>(RE::VTABLE::ImageSpaceEffectBokehDepthOfField[0].address());
 
-		//Disable ImageSpaceEffectMotionBlur tempory
+		//Disable ImageSpaceEffectMotionBlur temporary
 		write_vfunc<0x8, ImageSpaceEffectBokehDepthOfField_IsActive>(RE::VTABLE::ImageSpaceEffectMotionBlur[0].address());
 
 		//write_vfunc<0x8, ImageSpaceEffectMotionBlur>(RE::VTABLE::ImageSpaceEffectMotionBlur[0].address());
@@ -1394,8 +1397,6 @@ namespace Hook
 		ID3D11DeviceContext** ppImmediateContext)
 	{
 
-		D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_11_0;
-
 		HRESULT ret = oldFuncs.d3dCreateDevice(pAdapter, DriverType, Software, Flags, pFeatureLevels, FeatureLevels, SDKVersion, pSwapChainDesc, ppSwapChain, ppDevice, pFeatureLevel, ppImmediateContext);
 		if (FAILED(ret)) return ret;
 
@@ -1411,18 +1412,18 @@ namespace Hook
 		std::uintptr_t* vtbl2 = (std::uintptr_t*)(*ppDevice);
 		vtbl2 = (std::uintptr_t*)vtbl2[0];
 
-		std::uintptr_t* vtbl = (std::uintptr_t*)(g_Context.Get());
+		std::uintptr_t* vtbl = (std::uintptr_t*)(*ppImmediateContext);
 		vtbl = (std::uintptr_t*)vtbl[0];
 
 		//won't work without a modified dxgi.dll or d3d11.dll
 		HookFunc(vtbl, 12, (std::uintptr_t)DrawIndexedHook, (std::uintptr_t*)&oldFuncs.drawIndexed);
 
 		DXGI_SWAP_CHAIN_DESC sd;
-		g_Swapchain->GetDesc(&sd);
+		(*ppSwapChain)->GetDesc(&sd);
 		IDXGISwapChain3* mSwapChain;
-		g_Swapchain->QueryInterface(IID_PPV_ARGS(&mSwapChain));
+		(*ppSwapChain)->QueryInterface(IID_PPV_ARGS(&mSwapChain));
 		UINT backBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
-		HR(mSwapChain->GetBuffer(backBufferIndex, IID_PPV_ARGS(&GetSington()->mRealBackBuffer)));
+		HR(mSwapChain->GetBuffer(backBufferIndex, IID_PPV_ARGS(&(GetSington()->mRealBackBuffer))));
 
 		D3D11_TEXTURE2D_DESC realTexDesc;
 
@@ -1444,9 +1445,11 @@ namespace Hook
 		ImGui::StyleColorsDark();
 
 		IMGUI_CHECKVERSION();
-		ImGui_ImplWin32_Init(sd.OutputWindow);
-		ImGui_ImplDX11_Init((g_Device.Get()), (g_Context.Get()));
 
+		bool imguiWin32Init = ImGui_ImplWin32_Init(sd.OutputWindow);
+		bool imguidx11Init = ImGui_ImplDX11_Init((*ppDevice), (*ppImmediateContext));
+		_MESSAGE("first imguiWin32Init: %i", imguiWin32Init);
+		_MESSAGE("first imguidx11Init: %i", imguidx11Init);
 		return ret;
 	}
 

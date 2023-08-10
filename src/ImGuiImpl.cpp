@@ -202,8 +202,12 @@ namespace ImGuiImpl
 	void ImGuiImplClass::SaveData()
 	{
 		if (ImGui::Button("Save Setting", { 100, 40 })) {
+
+			bIsSaving = true;
 			currData = sdh->GetCurrentFTSData();
 			currData->legacyMode = bLegacyMode;
+			Hook::D3D::bLegacyMode = bLegacyMode;
+
 			currData->UsingSTS = UsingSTS_UI;
 			currData->scopeFrame = scopeFrame_UI;
 			currData->shaderData.IsCircle = IsCircle_UI;
@@ -249,12 +253,14 @@ namespace ImGuiImpl
 			sdh->WriteCurrentFTSData();
 			ResetUIData(this);
 			d3d->bRefreshChar = true;
+
+			bIsSaving = false;
 		}
 	}
 
 	void ImGuiImplClass::MapScopeShaderEffect()
 	{
-		legacyFlag = currData->legacyMode;
+		Hook::D3D::bLegacyMode = bLegacyMode;
 
 		scopeData.ScopeEffect_Offset = { LF(PositionOffset_UI[0]), LF(PositionOffset_UI[1]) };
 
@@ -288,7 +294,8 @@ namespace ImGuiImpl
 	{
 		if (ImGui::TreeNode("Main Menu")) 
 		{
-			ImGui::Checkbox("Legacy Mode", &bLegacyMode);
+			ImGui::Checkbox("Legacy Mode (Need Save to Work!!)", &bLegacyMode);
+			Hook::D3D::bLegacyMode = bLegacyMode;
 			ImGui::Checkbox("Disable Culling", &UsingSTS_UI);
 			ImGui::Checkbox("Disable Scope Effect While Bolt", &bDisableWhileBolt);
 			ImGui::DragInt("Effect Delay(ms)", (int*)&scopeFrame_UI, 1, 0, 5000);
@@ -374,12 +381,12 @@ namespace ImGuiImpl
 
 			if (bLegacyMode) 
 			{
-				ImGui::DragFloat2("Dest Scope Size", Size_UI, 0.1F, 0, 3840, "%.4f");
+				ImGui::DragFloat2("Dest Scope Size", Size_UI, 1.0F, 0, 3840, "%.4f");
 			} else {
 				if (IsCircle_UI)
-					ImGui::DragFloat2("Dest Scope Size", Size_UI, 0.001F, 0, 3840, "%.4f");
+					ImGui::DragFloat2("Dest Scope Size", Size_UI, 1.0F, 0, 3840, "%.4f");
 				else
-					ImGui::DragFloat4("Dest Scope Size", Size_rect_UI, 0.1F, -1200, 1200, "%.2f");
+					ImGui::DragFloat4("Dest Scope Size", Size_rect_UI, 1.0F, -1200, 1200, "%.2f");
 			}
 
 			ImGui::NewLine();
@@ -423,7 +430,7 @@ namespace ImGuiImpl
 	void ImGuiImplClass::RenderImgui()
 	{
 		if (bCanRender) {
-			StartOfImGuiRender();
+			//StartOfImGuiRender();
 
 			ImGui::Begin("Fake Throught Scope Adjusting Menu by XiFeiLi");
 
@@ -467,9 +474,6 @@ namespace ImGuiImpl
 
 				MapScopeShaderEffect();
 			}
-
-			ImGui::End();
-			ImGui::Render();
 		}
 	}
 	bool ImGuiImplClass::EnableImGuiRender(bool isShow, bool bIsInGame)

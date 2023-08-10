@@ -130,13 +130,10 @@ TESForm* GetFormFromMod(std::string modname, uint32_t formid)
 
 DWORD StartHooking(LPVOID)
 {
-	Sleep(100);
+	//Sleep(100);
 	hookIns = Hook::D3D::GetSington();
 	imgui_Impl = new ImGuiImpl::ImGuiImplClass();
 	hookIns->SetImGuiImplClass(imgui_Impl);
-	Upscaler = GetModuleHandleA("Fallout4Upscaler.dll");
-	hookIns->SetIsUpscaler(Upscaler);
-
 	Hook::D3D::Register();
 	return 0;
 }
@@ -270,15 +267,6 @@ inline void InitCurrentScopeData()
 				auto ftsData = it->second;
 				auto qbzAni = IsMagnifier();
 
-				if (qbzAni != nullptr)
-				{
-					_MESSAGE("IsMagnifier = true");
-				}
-				else
-				{
-					_MESSAGE("IsMagnifier = false");
-				}
-				
 				bool additionalKeywordsResult = true;
 				for (const auto& s : ftsData->additionalKeywords) {
 					if (!eventInstance->keywords->HasKeywordString(s))
@@ -305,7 +293,10 @@ inline void InitCurrentScopeData()
 					BGSKeyword* tempKeyword = (BGSKeyword*)TESForm::GetFormByEditorID(animFlavorKeyword.c_str());
 					
 					if (player->HasKeyword(tempKeyword))
+					{
 						sdh->SetCurrentFTSData(ftsData);
+						_MESSAGE("HasKeyword");
+					}
 					else
 						sdh->SetCurrentFTSData(nullptr);
 				}
@@ -437,7 +428,7 @@ bool IsNeedToBeCull(int indexCount = 0, int StrideCount = 0)
 
 void HandleScopeNode()
 {
-	if (currentData && currentData->UsingSTS)
+	if (!currentData || currentData->UsingSTS)
 		return;
 
 	if (player) {
@@ -480,7 +471,7 @@ void HandleScopeNode()
 bool isUpdateContext = false;
 
 float timerA = 0;
-
+bool bFirstTimeZoomData = false;
 
 BSScrapArray<const BGSKeyword*> lastKeywords = BSScrapArray<const BGSKeyword*>();
 
@@ -488,7 +479,22 @@ void HookedUpdate()
 {
 	if (InGameFlag&& player && player->Get3D(true)) {
 
-		if (!bHasStartedScope)
+		if (!bFirstTimeZoomData)
+		{
+			if (!hookIns->bEnableEditMode) {
+				if (!currentData)
+					return;
+				auto tempZDO = currentData->zoomDataOverwrite;
+				if (tempZDO.enableZoomDateOverwrite && weaponInstanceData) {
+					weaponInstanceData->zoomData->zoomData.fovMult = tempZDO.fovMul;
+					weaponInstanceData->zoomData->zoomData.cameraOffset = { tempZDO.x, tempZDO.y, tempZDO.z };
+				}
+			}
+			bFirstTimeZoomData = true;
+		}
+
+
+		if (!bHasStartedScope && !imgui_Impl->bIsSaving)
 		{
 			BSScrapArray<const BGSKeyword*> currkeywords;
 			player->CollectAllKeywords(currkeywords, nullptr);
@@ -497,7 +503,6 @@ void HookedUpdate()
 				lastKeywords = currkeywords;
 			}
 		}
-		
 
 		if (!currentData)
 			return;
@@ -521,7 +526,7 @@ void HookedUpdate()
 		hkTransform* charProxyTransform = (hkTransform*)(charProxy + 0x40);
 
 
-		if (scopeNode && camNode && rootNode) 
+		if (scopeNode && camNode) 
 		{
 			currPosition = charProxyTransform->m_translation;
 			NiPoint4 VirTransLerp = 
@@ -583,6 +588,7 @@ void HookedUpdate()
 				|| RE::UI::GetSingleton()->GetMenuOpen("CursorMenu")
 				) 
 			{
+				_MESSAGE("IsSideAim()");
 				hookIns->EnableRender(false);
 				hookIns->QueryRender(false);
 			} 
@@ -590,6 +596,7 @@ void HookedUpdate()
 			{
 				if (IsInADS(player)) 
 				{
+					_MESSAGE("IsInADS(player)");
 					if (!hookIns->bEnableEditMode) 
 					{
 						auto tempZDO = currentData->zoomDataOverwrite;
@@ -826,6 +833,7 @@ void ResetScopeStatus()
 	InGameFlag = true;
 	hookIns->SetIsInGame(InGameFlag);
 	hookIns->SetInterfaceTextRefresh(true);
+
 }
 
 

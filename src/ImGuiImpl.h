@@ -189,6 +189,7 @@ namespace ImGuiImpl
 	public:
 		
 		bool bCanRender;
+		bool bIsSaving = false;
 
 
 		ScopeData::ZoomDataOverwrite Imgui_ZDO;

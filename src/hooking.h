@@ -194,12 +194,10 @@ namespace Hook
 		void CreateBlender();
 		void QueryChangeReticleTexture();
 		void ResetZoomDelta();
-		void ResetUIData(ScopeData::FTSData* currData);
 		void GrabScreen();
 		void RenderToReticleTexture();
 		void RenderToReticleTextureNew(UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation);
 		void MapScopeEffectBuffer(ScopeEffectShaderData);
-		//void CallImGuiUpdateData();
 
 		RE::NiPoint3 WorldToScreen(RE::NiAVObject* cam, RE::NiAVObject* obj, float fov);
 

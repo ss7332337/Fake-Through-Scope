@@ -11,9 +11,10 @@ float4 main(float4 position : SV_Position ,float2 texcoord : TEXCOORD0) : SV_Tar
     adjTex *=  rcp(2.0F);
     adjTex += float2(0.5,0.5);
     float2 pos = adjTex / PixelSize;
-    float2 FTS_ScreenPosInPixel = FTS_ScreenPos* PixelSize;
+    float2 FTS_ScreenPosInPixel = FTS_ScreenPos * PixelSize;
+    float2 FTS_ScreenPosInPixelForDisplay = FTS_ScreenPos * PixelSize;
 
-    float2 basePos = float2(0.5, 0.5) + (ScopeEffect_OriPositionOffset) * float2(-1,1);
+    float2 basePos = float2(0.5, 0.5) + ScopeEffect_OriPositionOffset * float2(-1,1);
 	float2 texcoordOffset  = (basePos - FTS_ScreenPosInPixel) * camDepth;
     float2 screenSize = float2(BUFFER_WIDTH,BUFFER_HEIGHT);
 
@@ -28,7 +29,7 @@ float4 main(float4 position : SV_Position ,float2 texcoord : TEXCOORD0) : SV_Tar
     float4 rect = ScopeEffect_Rect + ScopeEffect_OffsetA.xyxy;
 	bool isRender = isCircle ? (dx * dx + dy * dy < r * r) : (texcoord.x >= rect.x && texcoord.y >= rect.y && texcoord.x <= rect.z && texcoord.y <= rect.w);
 
-    // if(abs(texcoord.x - FTS_ScreenPosInPixel.x) < 0.002 || abs(texcoord.y - FTS_ScreenPosInPixel.y)<0.002)
+    // if(abs(texcoord.x - FTS_ScreenPosInPixelForDisplay.x) < 0.002 || abs(texcoord.y - FTS_ScreenPosInPixelForDisplay.y)<0.002)
     // {
     //     return float4(0,1,1,1);
     // }

@@ -8,7 +8,6 @@
 
 已知问题：
 1. 在辐射4中，需要一个实现了proxy的dxgi.dll或者d3d11.dll才能正常使用（DrawIndexed在缺少了这个前置条件下无法勾取）
-2. 在使用CommonLibF4获取FOV时，诸如FOVAdjust，FOVAdjustTarget等数据获取不太稳定，因此放弃了多FOV的兼容。
 
 
 A MOD of Fallout 4, mainly using Hook D3D, theoretically as long as can get enough data and can be injected into the dll DX11 game can be used.
@@ -20,4 +19,3 @@ The picture-in-picture effect is a BackBuffer cut and modified instead of using 
 Known issues:
 
 1. In Fallout 4, you need a dxgi.dll or d3d11.dll that implements proxy to work properly (DrawIndexed cannot be invoked without this precondition).
-2. When using CommonLibF4 to obtain FOV, data acquisition such as FOVAdjust, FOVAdjustTarget is not stable, so the compatibility of multi-FOV is abandoned.
