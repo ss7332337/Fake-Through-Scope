@@ -5,6 +5,7 @@
 #include <DirectXMath.h>
 #include <d3d11_1.h>
 #include "ImGuiImpl.h"
+#include "MathUtils.h"
 
 using namespace RE;
 using namespace BSScript;
@@ -151,14 +152,20 @@ bool IssueChangeAnim(std::monostate, BGSKeyword* keyword)
 	return true;
 }
 
+int testDegree = 0;
+
 bool TestButton(std::monostate)
 {
-	BSScrapArray<const BGSKeyword*> playerkeywords;
-	player->CollectAllKeywords(playerkeywords, nullptr);
+	NiPoint3 pos, dir;
+	NiPoint3 right = NiPoint3(-1, 0, 0);
+	player-> GetEyeVector(pos, dir, true);
+	NiPoint3 heading = Normalize(NiPoint3(dir.x, dir.y, 0));
 
-	for (auto& p : playerkeywords) {
-		_MESSAGE("%s", p->formEditorID.c_str());
-	}
+	testDegree += 5;
+
+	NiMatrix3 rot = scopeNode->parent->parent->world.rotate * GetRotationMatrix33(heading, testDegree * toRad) * Transpose(scopeNode->parent->parent->world.rotate);
+	scopeNode->parent->local.rotate = rot;
+
 	return true;
 }
 
@@ -335,7 +342,7 @@ public:
 
 			//if (evn->device == INPUT_DEVICE::kKeyboard && id == VK_OEM_PERIOD && evn->QJustPressed()) {
 			//	std::monostate mono;
-			//	TestButton(mono);
+			//	//TestButton(mono);
 			//}
 
 
@@ -514,11 +521,6 @@ void HookedUpdate()
 		pc = PlayerControls::GetSingleton();
 		NiPoint3 tempOut;
 
-		if (scopeNode && camNode) 
-		{
-			tempOut = hookIns->WorldToScreen(camNode, scopeNode, PlayerCamera::GetSingleton()->firstPersonFOV);
-		}
-
 		pcam = PlayerCamera::GetSingleton();
 
 		NiPointer<bhkCharacterController> con = player->currentProcess->middleHigh->charController;
@@ -528,6 +530,7 @@ void HookedUpdate()
 
 		if (scopeNode && camNode) 
 		{
+			tempOut = hookIns->WorldToScreen(camNode, scopeNode, PlayerCamera::GetSingleton()->firstPersonFOV);
 			currPosition = charProxyTransform->m_translation;
 			NiPoint4 VirTransLerp = 
 			{	
@@ -588,7 +591,6 @@ void HookedUpdate()
 				|| RE::UI::GetSingleton()->GetMenuOpen("CursorMenu")
 				) 
 			{
-				_MESSAGE("IsSideAim()");
 				hookIns->EnableRender(false);
 				hookIns->QueryRender(false);
 			} 
@@ -596,7 +598,6 @@ void HookedUpdate()
 			{
 				if (IsInADS(player)) 
 				{
-					_MESSAGE("IsInADS(player)");
 					if (!hookIns->bEnableEditMode) 
 					{
 						auto tempZDO = currentData->zoomDataOverwrite;
@@ -725,11 +726,7 @@ public:
 					hasUpdateSighted = false;
 					hasEjectShellCasing = true;
 				}
-
-				
-			}
-
-			
+			}	
 		} 
 		else{
 
@@ -841,8 +838,7 @@ void ResetScopeStatus()
 
 extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a_f4se, F4SE::PluginInfo* a_info)
 {
-	/*while (!IsDebuggerPresent()) {
-	}*/
+	
 
 #ifndef NDEBUG
 	auto sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
@@ -903,6 +899,10 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a
 
 extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Load(const F4SE::LoadInterface* a_f4se)
 {
+#ifdef _DEBUG
+	while (!IsDebuggerPresent()) {
+	}
+#endif
 
 	F4SE::Init(a_f4se);
 

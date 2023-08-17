@@ -90,6 +90,7 @@ if (NOT TARGET ImGui186)
 	add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../imgui-1.86" ImGui186)
 endif ()
 
+#add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../FidelityFX-SDK-1.0/sdk" FidelityFX-SDK)
 
 find_package(spdlog REQUIRED CONFIG)
 
@@ -154,6 +155,7 @@ target_include_directories(
 		${CMAKE_CURRENT_BINARY_DIR}/include
 		${CMAKE_CURRENT_SOURCE_DIR}/src
 		${CMAKE_CURRENT_SOURCE_DIR}/../imgui-1.86
+		${CMAKE_CURRENT_SOURCE_DIR}/include
 
 )
 
@@ -163,9 +165,16 @@ target_link_libraries(
 		CommonLibF4::CommonLibF4
 		spdlog::spdlog
 		ImGui186::ImGui186
+		${CMAKE_CURRENT_SOURCE_DIR}/lib/ffx_backend_dx12_x64.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/lib/ffx_fsr2_x64.lib
+		#FidelityFX-SDK
 )
 
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
+
+
 link_libraries(capstone)
+
 
 target_precompile_headers(
 	${PROJECT_NAME}

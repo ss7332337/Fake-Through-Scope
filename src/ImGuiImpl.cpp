@@ -429,7 +429,8 @@ namespace ImGuiImpl
 
 	void ImGuiImplClass::RenderImgui()
 	{
-		if (bCanRender) {
+		if (bCanRender) 
+		{
 			//StartOfImGuiRender();
 
 			ImGui::Begin("Fake Throught Scope Adjusting Menu by XiFeiLi");
@@ -474,6 +475,7 @@ namespace ImGuiImpl
 
 				MapScopeShaderEffect();
 			}
+			ImGui::End();
 		}
 	}
 	bool ImGuiImplClass::EnableImGuiRender(bool isShow, bool bIsInGame)

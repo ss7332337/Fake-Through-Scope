@@ -142,6 +142,24 @@ void SetMatrix33(float a, float b, float c, float d, float e, float f, float g, 
 	mat.entry[2].pt[2] = i;
 }
 
+NiMatrix3 Transpose(NiMatrix3 mat)
+{
+	NiMatrix3 trans;
+	float a = mat.entry[0].pt[0];
+	float b = mat.entry[0].pt[1];
+	float c = mat.entry[0].pt[2];
+	float d = mat.entry[1].pt[0];
+	float e = mat.entry[1].pt[1];
+	float f = mat.entry[1].pt[2];
+	float g = mat.entry[2].pt[0];
+	float h = mat.entry[2].pt[1];
+	float i = mat.entry[2].pt[2];
+	SetMatrix33(a, d, g,
+		b, e, h,
+		c, f, i, trans);
+	return trans;
+}
+
 NiMatrix3 GetRotationMatrix33(float pitch, float yaw, float roll)
 {
 	NiMatrix3 m_roll;

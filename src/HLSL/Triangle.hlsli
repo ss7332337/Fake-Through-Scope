@@ -70,11 +70,6 @@ cbuffer ScopeEffectData : register(b5)
 	
 };
 
-cbuffer CopyFormGame : register(b8)
-{
-	float4x4 copyMat;
-}
-
 cbuffer eyeDirectionData: register(b6)
 {
  	float3 eyeDirection1;
@@ -90,12 +85,19 @@ cbuffer eyeDirectionData: register(b6)
 
 
 cbuffer ftsPoint: register(b7)
- {
+{
 	row_major float4x4 testingMat;
 	row_major float4x4 FtsLocalRotation;
  	row_major float4x4 FtsWorldRotation;
 	row_major float4x4 CameraRotation2;
- };
+};
+
+cbuffer CopyFormGame : register(b8)
+{
+	float4 unkbuf1;
+	float4x4 ProjectMat;
+}
+
 
 SamplerState gSamLinear : register(s0);
 SamplerState gSamReticle : register(s1);

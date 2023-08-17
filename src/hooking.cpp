@@ -2,7 +2,7 @@
 #include "DDSTextureLoader11.h"
 #include "WICTextureLoader11.h"
 
-#include "MathUtils.h"
+//#include "MathUtils.h"
 #include <vector>
 #include <Shlwapi.h>
 #include <d3dcompiler.h>
@@ -10,11 +10,14 @@
 #include <d3dcompiler.h>
 #include <dxgi1_4.h>
 
-
+//#include "FSR/ffx_fsr2.h"
+//#include "FSR/ffx_dx12.h"
+//#include <d3d11on12.h>
 
 #pragma comment(lib, "D3DCompiler.lib")
 #pragma comment(lib, "dwrite.lib")
 #pragma comment(lib, "dxguid.lib")
+
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -983,6 +986,7 @@ namespace Hook
 			g_Context->CopyResource(m_DstTexture, mRTRenderTargetTexture.Get());
 
 			g_Context->VSSetShader(targetVS.Get(), targetVSClassInstance.GetAddressOf(), targetVSNumClassesInstance);
+			//g_Context->VSSetShader(m_outPutVertexShader.Get(), targetVSClassInstance.GetAddressOf(), targetVSNumClassesInstance);
 			g_Context->PSSetShader(m_outPutPixelShader.Get(), nullptr, 0);
 			//g_Context->PSSetShader(m_outPutPixelShader.Get(), nullptr, 0);
 			g_Context->PSSetConstantBuffers(4, 1, m_pConstantBufferData.GetAddressOf());
@@ -1159,7 +1163,6 @@ namespace Hook
 
 			if (isEnableRender && pcam && player)
 			{
-				_MESSAGE("isEnableRender && pcam && player");
 				if (bIsFirst) 
 				{
 					OnResize();
@@ -1173,8 +1176,6 @@ namespace Hook
 
 				if (!currData || !currData->containAlladditionalKeywords)
 					return;
-
-				_MESSAGE("currData && currData->containAlladditionalKeywords");
 
 				g_Context->OMGetRenderTargets(1, &tempRt, &tempSV);
 
@@ -1202,7 +1203,7 @@ namespace Hook
 
 		imguiImpl->RenderImgui();
 
-		ImGui::End();
+		
 		ImGui::Render();
 	}
 
@@ -1222,8 +1223,27 @@ namespace Hook
 			g_Swapchain->GetDesc(&sd);
 			oldFuncs.wndProc = (WNDPROC)SetWindowLongPtr(sd.OutputWindow, GWLP_WNDPROC, (LONG_PTR)WndProcHandler);
 
+			ImGui::CreateContext();
+			ImGuiIO& io = ImGui::GetIO();
+			(void)io;
+
+			ImGui::StyleColorsDark();
+
+			IMGUI_CHECKVERSION();
+
+			bool imguiWin32Init = ImGui_ImplWin32_Init(sd.OutputWindow);
+			bool imguidx11Init = ImGui_ImplDX11_Init(g_Device.Get(), g_Context.Get());
+			_MESSAGE("first imguiWin32Init: %i", imguiWin32Init);
+			_MESSAGE("first imguidx11Init: %i", imguidx11Init);
+
 			InitWndHandler = true;
 		}
+
+		if (!isActive_TAA)
+		{
+			GetSington()->Render();
+		}
+
 
 		bSelfDraw = false;
 		if (isShow) {
@@ -1250,7 +1270,8 @@ namespace Hook
 		static void thunk(uint64_t This, uint64_t a2, uint64_t a3)
 		{
 			func(This, a2, a3);
-			GetSington()->Render();
+			if (isActive_TAA)
+				GetSington()->Render();
 
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
@@ -1291,7 +1312,7 @@ namespace Hook
 		{
 			// may be is_Active
 			//_MESSAGE("ImageSpaceEffectMotionBlur,%i",a1);
-			return func(a1);
+			return 1;
 			//return false;
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
@@ -1367,12 +1388,12 @@ namespace Hook
 
 		
 		write_vfunc<0x1, ImageSpaceEffectTemporalAA_Render>(RE::VTABLE::ImageSpaceEffectTemporalAA[0].address());
-		write_vfunc<0x1, ImageSpaceEffectBokehDepthOfField_Render>(RE::VTABLE::ImageSpaceEffectBokehDepthOfField[0].address());
 		write_vfunc<0x8, ImageSpaceEffectTemporalAA_IsActive>(RE::VTABLE::ImageSpaceEffectTemporalAA[0].address());
-		write_vfunc<0x8, ImageSpaceEffectBokehDepthOfField_IsActive>(RE::VTABLE::ImageSpaceEffectBokehDepthOfField[0].address());
+		//write_vfunc<0x1, ImageSpaceEffectBokehDepthOfField_Render>(RE::VTABLE::ImageSpaceEffectBokehDepthOfField[0].address());
+		//write_vfunc<0x8, ImageSpaceEffectBokehDepthOfField_IsActive>(RE::VTABLE::ImageSpaceEffectBokehDepthOfField[0].address());
 
-		//Disable ImageSpaceEffectMotionBlur temporary
-		write_vfunc<0x8, ImageSpaceEffectBokehDepthOfField_IsActive>(RE::VTABLE::ImageSpaceEffectMotionBlur[0].address());
+		////Disable ImageSpaceEffectMotionBlur temporary
+		//write_vfunc<0x8, ImageSpaceEffectBokehDepthOfField_IsActive>(RE::VTABLE::ImageSpaceEffectMotionBlur[0].address());
 
 		//write_vfunc<0x8, ImageSpaceEffectMotionBlur>(RE::VTABLE::ImageSpaceEffectMotionBlur[0].address());
 		//write_vfunc<0x3, ImageSpaceEffectMotionBlur1>(RE::VTABLE::ImageSpaceEffectMotionBlur[0].address());
@@ -1382,7 +1403,10 @@ namespace Hook
 		return true;
 	}
 
-
+	/*ID3D12Device* d3d12Device = nullptr;
+	ID3D12CommandQueue* d3d12CommandQueue = nullptr;
+	ID3D11Device* d3d11Device = nullptr;
+	ID3D11DeviceContext* d3d11Context = nullptr;*/
 
 	HRESULT __stdcall D3D::D3D11CreateDeviceAndSwapChainHook(IDXGIAdapter* pAdapter,
 		D3D_DRIVER_TYPE DriverType,
@@ -1404,6 +1428,25 @@ namespace Hook
 		g_Context = *ppImmediateContext;
 		g_Device = *ppDevice;
 		g_Swapchain = *ppSwapChain;
+
+		/*HR(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device)));
+		HR(d3d12Device->CreateCommandQueue(nullptr, IID_PPV_ARGS(&d3d12CommandQueue)));
+
+		HR(D3D11On12CreateDevice(d3d12Device,
+			0,
+			nullptr,
+			0,
+			reinterpret_cast<IUnknown**>(d3d12CommandQueue),
+			1,
+			0,
+			&d3d11Device,
+			&d3d11Context,
+			nullptr));
+
+		ID3D11On12Device* d3d11On12Device = nullptr;
+		HR(d3d11Device->QueryInterface(IID_PPV_ARGS(&d3d11On12Device)));
+
+		_MESSAGE("d3d11On12Device: %i", d3d11On12Device);*/
 
 		std::uintptr_t* vtbl1 = (std::uintptr_t*)(*ppSwapChain);
 		vtbl1 = (std::uintptr_t*)vtbl1[0];
@@ -1438,18 +1481,7 @@ namespace Hook
 		windowWidth = realTexDesc.Width;
 		windowHeight = realTexDesc.Height;
 
-		ImGui::CreateContext();
-		ImGuiIO& io = ImGui::GetIO();
-		(void)io;
-
-		ImGui::StyleColorsDark();
-
-		IMGUI_CHECKVERSION();
-
-		bool imguiWin32Init = ImGui_ImplWin32_Init(sd.OutputWindow);
-		bool imguidx11Init = ImGui_ImplDX11_Init((*ppDevice), (*ppImmediateContext));
-		_MESSAGE("first imguiWin32Init: %i", imguiWin32Init);
-		_MESSAGE("first imguidx11Init: %i", imguidx11Init);
+		
 		return ret;
 	}
 
