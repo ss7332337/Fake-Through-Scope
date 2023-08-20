@@ -6,12 +6,14 @@
 
 
 inline void InitCurrentScopeData();
+char* _MESSAGE(const char* fmt, ...);
 
 namespace ImGuiImpl
 {
 	std::vector<std::string> additionalKeywords;
 	int additionalKeywords_count = 0;
 	bool legacyFlag = true;
+	bool bhasSaveZoomData = false;
 
 #define LF(f) (legacyFlag ? (f) : (f) / 1000.0f)
 #define FL(f) (legacyFlag ? (f) : (f) * 1000.0f)
@@ -36,6 +38,12 @@ namespace ImGuiImpl
 		}
 
 		return arrNew;
+	}
+
+	ImGuiImplClass* ImGuiImplClass::GetSington()
+	{
+		static ImGuiImplClass instance;
+		return &instance;
 	}
 
 	using namespace ScopeData;
@@ -156,6 +164,7 @@ namespace ImGuiImpl
 			ins->IsCircle_UI = data->shaderData.IsCircle;
 			ins->camDepth_UI = data->shaderData.camDepth;
 			ins->ReticleSize_UI = data->shaderData.ReticleSize;
+			memcpy(ins->reticle_Offset, data->shaderData.reticle_Offset, 2 * sizeof(float));
 			ins->minZoom_UI = data->shaderData.minZoom;
 			ins->maxZoom_UI = data->shaderData.maxZoom;
 
@@ -194,6 +203,12 @@ namespace ImGuiImpl
 				sdh->ReloadFTSData(data);
 				InitCurrentScopeData();
 				currData = sdh->GetCurrentFTSData();
+
+				if (bhasSaveZoomData)
+				{
+					Imgui_InstanceData->zoomData->zoomData = currOriZoomData;
+				}
+
 				ResetUIData(this);
 			}
 		}
@@ -267,7 +282,10 @@ namespace ImGuiImpl
 		scopeData.ScopeEffect_OriPositionOffset = {  LF(OriPositionOffset_UI[0]),  LF(OriPositionOffset_UI[1]) };
 		scopeData.ScopeEffect_Size = { LF(Size_UI[0]), LF(Size_UI[1]) };
 		scopeData.ScopeEffect_OriSize = { OriSize_UI[0], OriSize_UI[1] };
+
 		scopeData.ReticleSize = ReticleSize_UI;
+		scopeData.reticle_Offset = { reticle_Offset[0] / 1000.0F, reticle_Offset[1] / 1000.0F };
+
 		scopeData.parallax_Radius = radius_UI;
 		scopeData.parallax_relativeFogRadius = relativeFogRadius_UI;
 		scopeData.parallax_scopeSwayAmount = scopeSwayAmount_UI;
@@ -332,6 +350,12 @@ namespace ImGuiImpl
 			ImGui::Checkbox("Enable ZoomData Overwrite", &Imgui_ZDO.enableZoomDateOverwrite);
 			if (Imgui_ZDO.enableZoomDateOverwrite)
 			{
+				if (!bhasSaveZoomData)
+				{
+					currOriZoomData = Imgui_InstanceData->zoomData->zoomData;
+					bhasSaveZoomData = true;
+				}
+
 				if (Imgui_InstanceData && Imgui_InstanceData->zoomData)
 				{
 					ImGui::DragFloat("fov mul", &Imgui_InstanceData->zoomData->zoomData.fovMult, 0.01F, 0, 30, "%.3f");
@@ -344,6 +368,10 @@ namespace ImGuiImpl
 					ImGui::Text("InstanceData ERROR!");
 				}
 				
+			}
+			else
+			{
+				bhasSaveZoomData = false;
 			}
 			ImGui::TreePop();
 		}
@@ -369,6 +397,7 @@ namespace ImGuiImpl
 
 			ImGui::DragFloat("Scope Depth", &camDepth_UI, 0.01F, 0, 15);
 			ImGui::DragFloat("Reticle Size", &ReticleSize_UI, 0.01F, 0, 128);
+			ImGui::DragFloat2("Reticle Offset", reticle_Offset, 0.01F, -1000.0F, 1000.0F);
 			ImGui::NewLine();
 			ImGui::DragFloat("Min Zoom", &minZoom_UI, 0.01F, 0, 15);
 			ImGui::DragFloat("Max Zoom", &maxZoom_UI, 0.01F, 0, 15);
@@ -427,22 +456,28 @@ namespace ImGuiImpl
 		currData = sdh->GetCurrentFTSData();
 	}
 
+	bool bIsFirstRender = true;
+
 	void ImGuiImplClass::RenderImgui()
 	{
-		if (bCanRender) 
+		/*if (bIsFirstRender) {
+			ImGui::SetNextWindowPos(ImVec2(0, 0));
+			bIsFirstRender = false;
+		}*/
+		//StartOfImGuiRender();
+
+		ImGui::Begin("Fake Throught Scope Adjusting Menu by XiFeiLi");
+
+		if (GetSington()->bCanRender) 
 		{
-			//StartOfImGuiRender();
-
-			ImGui::Begin("Fake Throught Scope Adjusting Menu by XiFeiLi");
-
-			if (!CheckAndInit()) {
+			if (!GetSington()->CheckAndInit()) {
 				ImGui::TextUnformatted("Unable to access critical data!");
 				ImGui::NewLine();
 				EndOfImGuiRender();
 				return;
 			}
 
-			ResetUIData(this);
+			ResetUIData(GetSington());
 
 			if (!currData) {
 				ImGui::TextUnformatted("This is not FTS Supported Weapon, Consider make a Patch or Double Check your Patch!");
@@ -451,32 +486,32 @@ namespace ImGuiImpl
 				return;
 			}
 
-			KeyBindingSection(nvgComboKeyIndex, nvgMainKeyIndex, guiKeyIndex);
+			KeyBindingSection(GetSington()->nvgComboKeyIndex, GetSington()->nvgMainKeyIndex, GetSington()->guiKeyIndex);
 
 			ImGui::Checkbox("Edit Mode", &Hook::D3D::bEnableEditMode);
 
 			if (Hook::D3D::bEnableEditMode)
 			{
-				ReloadData();
+				GetSington()->ReloadData();
 
 				ImGui::NewLine();
 
-				MainMenuSection();
+				GetSington()->MainMenuSection();
 
 				ImGui::NewLine();
 
-				ShaderDataSection();
+				GetSington()->ShaderDataSection();
 
 				ImGui::NewLine();
 
-				ParallaxDataSection();
+				GetSington()->ParallaxDataSection();
 
-				SaveData();
+				GetSington()->SaveData();
 
-				MapScopeShaderEffect();
+				GetSington()->MapScopeShaderEffect();
 			}
-			ImGui::End();
 		}
+		ImGui::End();
 	}
 	bool ImGuiImplClass::EnableImGuiRender(bool isShow, bool bIsInGame)
 	{

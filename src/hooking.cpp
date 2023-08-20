@@ -21,7 +21,7 @@
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-
+ImGuiIO io;
 
 static const char* current_item = NULL;
 static const char* current_itemA = NULL;
@@ -357,22 +357,18 @@ namespace Hook
 
 	LRESULT __stdcall D3D::WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
+
 		switch (msg) {
 			case WM_KEYDOWN:
 				{
 					bool isPressed = (lParam & 0x40000000) != 0x0;
 					if (!isPressed && wParam == sdh->guiKey) {
 						isShow = !isShow;
-						
-						//StayInADS();
+
 						GetSington()->EnableCursor(isShow);
 						imguiImpl->PlayerAim(isShow);
 						auto input = (RE::BSInputDeviceManager::GetSingleton());
-						if (input) {
-							input->valueQueued = !isShow;
-							input->pollingEnabled = !isShow;
-						}
-						
+						RE::ControlMap::GetSingleton()->ignoreKeyboardMouse = isShow;
 					}
 				}
 				break;
@@ -387,10 +383,9 @@ namespace Hook
 
 		ImGuiIO& io = ImGui::GetIO();
 
-		if (isShow && ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
-			return TRUE;
-	
-		return CallWindowProc(oldFuncs.wndProc,hWnd, msg, wParam, lParam);
+		ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
+		return CallWindowProc(oldFuncs.wndProc, hWnd, msg, wParam, lParam);
+
 	}
 
 	XMMATRIX GetProjectionMatrix(float fov)
@@ -827,6 +822,7 @@ namespace Hook
 			auto tempSize = LFA(currData->shaderData.Size, 2);
 			auto tempSize_Rect = LFA(currData->shaderData.rectSize, 4);
 
+			scopeData.reticle_Offset = { currData->shaderData.reticle_Offset[0], currData->shaderData.reticle_Offset[1] };
 			scopeData.BaseWeaponPos = currData->shaderData.baseWeaponPos;
 			scopeData.camDepth = currData->shaderData.camDepth;
 			scopeData.EnableNV = currData->shaderData.bCanEnableNV ? bEnableNVG : 0;
@@ -1201,10 +1197,12 @@ namespace Hook
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 
+		//ImGui::ShowMetricsWindow();
+
 		imguiImpl->RenderImgui();
 
-		
 		ImGui::Render();
+		ImGui::EndFrame();
 	}
 
 	inline void** get_vtable_ptr(void* obj)
@@ -1224,8 +1222,7 @@ namespace Hook
 			oldFuncs.wndProc = (WNDPROC)SetWindowLongPtr(sd.OutputWindow, GWLP_WNDPROC, (LONG_PTR)WndProcHandler);
 
 			ImGui::CreateContext();
-			ImGuiIO& io = ImGui::GetIO();
-			(void)io;
+			io = ImGui::GetIO();
 
 			ImGui::StyleColorsDark();
 
@@ -1246,15 +1243,22 @@ namespace Hook
 
 
 		bSelfDraw = false;
-		if (isShow) {
-			GetSington()->RenderImGui();
+		imguiImpl->EnableImGuiRender(isShow, true);
 
+		if (isShow) {
+
+			GetSington()->RenderImGui();
+			//io.WantCaptureMouse = true;
 			if (ImGui::GetDrawData())
 				ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 			else
 			{
 				_MESSAGE("Can't Get DrawData. ReIniting");
 			}
+		}
+		else
+		{
+			//io.WantCaptureMouse = false;
 		}
 		auto thr = oldFuncs.d3dPresent(pSwapChain, SyncInterval, Flags);
 		return thr;
@@ -1381,6 +1385,8 @@ namespace Hook
 
 	bool D3D::Register() noexcept
 	{
+
+		imguiImpl = ImGuiImpl::ImGuiImplClass::GetSington();
 
 		HookImportFunc("d3d11.dll", "D3D11CreateDeviceAndSwapChain", oldFuncs.d3dCreateDevice, (std::uintptr_t)D3D11CreateDeviceAndSwapChainHook);
 

@@ -160,6 +160,7 @@ namespace ScopeData
 			{ "Size", { { "x", s.Size[0] }, { "y", s.Size[1] } } },
 			{ "OriSize", { { "x", s.OriSize[0] }, { "y",s.OriSize[1] } } },
 			{ "rectSize", { { "x", s.rectSize[0] }, { "y", s.rectSize[1] }, { "z", s.rectSize[2] }, { "w", s.rectSize[3] } } },
+			{ "reticle_Offset", { s.reticle_Offset } },
 
 			{ "ReticleSize", s.ReticleSize },
 			{ "fovAdjust", s.fovAdjust },

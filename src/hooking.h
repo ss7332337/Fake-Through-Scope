@@ -158,7 +158,8 @@ namespace Hook
 			XMFLOAT4X4 CameraRotation = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 			XMFLOAT2 FTS_ScreenPos = { 0, 0 };
-			XMFLOAT2 padding6 = { 0, 0 };
+			XMFLOAT2 reticle_Offset = { 0, 0 };
+
 			XMFLOAT4X4 projMat;	
 			XMFLOAT4 rect;
 		};
@@ -189,7 +190,7 @@ namespace Hook
 		void UpdateScene(ScopeData::FTSData*);
 		void ShowMenu(bool);
 		void EnableCursor(bool enable);
-		void RenderImGui();
+		static void RenderImGui();
 		bool GetIsShow() { return isShow; };
 		void CreateBlender();
 		void QueryChangeReticleTexture();

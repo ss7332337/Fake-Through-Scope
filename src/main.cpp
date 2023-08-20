@@ -133,9 +133,8 @@ DWORD StartHooking(LPVOID)
 {
 	//Sleep(100);
 	hookIns = Hook::D3D::GetSington();
-	imgui_Impl = new ImGuiImpl::ImGuiImplClass();
-	hookIns->SetImGuiImplClass(imgui_Impl);
 	Hook::D3D::Register();
+	imgui_Impl = ImGuiImpl::ImGuiImplClass::GetSington();
 	return 0;
 }
 
@@ -213,8 +212,10 @@ BGSKeyword* IsMagnifier()
 
 	if (player) {
 		if (QMW_AnimsQBZ191M_on) {
-			if (player->HasKeyword(QMW_AnimsQBZ191M_on))
+			if (player->HasKeyword(QMW_AnimsQBZ191M_on)) {
+				_MESSAGE("QMW_AnimsQBZ191M_on");
 				return QMW_AnimsQBZ191M_on;
+			}
 		} else if (QMW_AnimsQBZ191M_off) {
 			if (player->HasKeyword(QMW_AnimsQBZ191M_off))
 				return QMW_AnimsQBZ191M_off;
@@ -819,6 +820,7 @@ void InitializePlugin()
 
 void ResetScopeStatus()
 {
+	RE::ControlMap::GetSingleton()->ignoreKeyboardMouse = false;
 	hookIns->InitPlayerData(player, pcam);
 	InitCurrentScopeData();
 	hookIns->SetScopeEffect(false);

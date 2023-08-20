@@ -62,8 +62,8 @@ cbuffer ScopeEffectData : register(b5)
 	float4x4 CameraRotation; 
 
 	float2 FTS_ScreenPos;
-	float2 sd_padding6;
-	
+	float2 Reticle_Offset;
+
 	row_major float4x4 projMat;
 
 	float4 ScopeEffect_Rect;

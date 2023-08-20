@@ -62,6 +62,7 @@ namespace ScopeData
 		float rectSize[4] = { 235.0f, 200.0f, 775.0f, 760.0f };
 
 		float ReticleSize = 4;
+		float reticle_Offset[2] = { 0.0f, 0.0f };
 
 		float fovAdjust = 0;
 		Parallax parallax;

@@ -185,16 +185,18 @@ namespace ImGuiImpl
 	public:
 		ImGuiImplClass();
 		~ImGuiImplClass(){};
+		static ImGuiImplClass* GetSington();
 
 	public:
 		
-		bool bCanRender;
+		bool bCanRender = false;
 		bool bIsSaving = false;
 
 
 		ScopeData::ZoomDataOverwrite Imgui_ZDO;
 		ScopeData::ZoomDataOverwrite ori_ZDO;
 		
+		RE::BGSZoomData::Data currOriZoomData;
 
 		bool bLegacyMode;
 		bool UsingSTS_UI;
@@ -203,6 +205,7 @@ namespace ImGuiImpl
 		bool IsCircle_UI;
 		float camDepth_UI;
 		float ReticleSize_UI;
+		float reticle_Offset[2];
 		float minZoom_UI;
 		float maxZoom_UI;
 		float PositionOffset_UI[2];
