@@ -14,7 +14,7 @@
 
 #define SAFE_RELEASE(p) { if ((p)) { (p)->Release(); (p) = nullptr; } }
 #ifndef HR
-#	define HR(x) { HRESULT hr = (x);  if (FAILED(hr)) {_MESSAGE("%s, %i, %i",__FILE__, __LINE__ , hr);}}
+#	define HR(x) { HRESULT hr = (x);  if (FAILED(hr)) {_MESSAGE("[-] %s, %i, %i",__FILE__, __LINE__ , hr);}}
 #endif
 
 void SafeWriteBuf(uintptr_t addr, void* data, size_t len);
@@ -29,7 +29,6 @@ using ComPtr = Microsoft::WRL::ComPtr<T>;
 namespace Hook
 {
 	
-
 	HRESULT CreateShaderFromFile(
 		const WCHAR* csoFileNameInOut,
 		const WCHAR* hlslFileName,
@@ -60,6 +59,7 @@ namespace Hook
 	{
 
 		using CreateDeviceAndSwapChain = decltype(&D3D11CreateDeviceAndSwapChain);
+
 		using ClearState = HRESULT(__stdcall*)(ID3D11DeviceContext*);
 		using Present = HRESULT(__stdcall*)(IDXGISwapChain*, UINT, UINT);
 		using OMSetRenderTargets = void(WINAPI*)(ID3D11DeviceContext*,
@@ -76,6 +76,9 @@ namespace Hook
 		typedef void(__stdcall* D3D11VSSetConstantBuffers)(ID3D11DeviceContext* ,UINT, UINT, ID3D11Buffer* const*);
 		typedef void(__stdcall* tdefDrawIndexed)(ID3D11DeviceContext*, UINT, UINT, INT);
 		typedef HRESULT(__stdcall* tdefCreateBuffer)(ID3D11Device*, struct D3D11_BUFFER_DESC const*, struct D3D11_SUBRESOURCE_DATA const*, struct ID3D11Buffer**);
+
+	public:
+		tdefDrawIndexed tdefDrawIndexed_t;
 
 	private:
 		static std::once_flag flagOnce;
@@ -116,6 +119,8 @@ namespace Hook
 			XMFLOAT4X4 ftsWorldRotation = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 			XMFLOAT4X4 CameraRotation = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 		};
+
+	public:
 
 		struct ScopeEffectShaderData
 		{
@@ -180,6 +185,9 @@ namespace Hook
 			float deltaZoom;
 		};
 
+	public:
+
+		void __stdcall Hook();
 		void EnableRender(bool flag) { isEnableRender = flag; }
 		void Render();
 		bool InitEffect();
@@ -199,6 +207,9 @@ namespace Hook
 		void RenderToReticleTexture();
 		void RenderToReticleTextureNew(UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation);
 		void MapScopeEffectBuffer(ScopeEffectShaderData);
+		void detourDirectXPresent();
+		void detourDirectXDrawIndexed();
+		void CreateDx12Device();
 
 		RE::NiPoint3 WorldToScreen(RE::NiAVObject* cam, RE::NiAVObject* obj, float fov);
 
@@ -212,8 +223,9 @@ namespace Hook
 		D3D& operator=(const D3D&) = delete;
 		D3D& operator=(D3D&&) = delete;
 
+		static HRESULT GetDeviceAndCtxFromSwapchain(IDXGISwapChain* pSwapChain, ID3D11Device** ppDevice, ID3D11DeviceContext** ppContext);
 		static void __stdcall DrawIndexedHook(ID3D11DeviceContext* pContext, UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation);
-		static HRESULT __stdcall PresentHook(IDXGISwapChain*, UINT, UINT);
+		static HRESULT __fastcall PresentHook(IDXGISwapChain*, UINT, UINT);
 
 		static HRESULT __stdcall D3D11CreateDeviceAndSwapChainHook(IDXGIAdapter*, D3D_DRIVER_TYPE, HMODULE, UINT, const D3D_FEATURE_LEVEL*, UINT, UINT, const DXGI_SWAP_CHAIN_DESC*, IDXGISwapChain**, ID3D11Device**, D3D_FEATURE_LEVEL*, ID3D11DeviceContext**);
 		static LRESULT __stdcall WndProcHandler(HWND, UINT, WPARAM, LPARAM);

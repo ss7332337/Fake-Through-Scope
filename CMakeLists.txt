@@ -38,9 +38,10 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE 
 
 project(
 	FakeThroughScope
-	VERSION 0.9.0
+	VERSION 0.10.3
 	LANGUAGES CXX
 )
+
 
 
 configure_file(
@@ -90,6 +91,8 @@ if (NOT TARGET ImGui186)
 	add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../imgui-1.86" ImGui186)
 endif ()
 
+
+
 #add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../FidelityFX-SDK-1.0/sdk" FidelityFX-SDK)
 
 find_package(spdlog REQUIRED CONFIG)
@@ -106,16 +109,17 @@ source_group(
 
 # ---- Create DLL ----
 file(GLOB HLSL_FILES src/HLSL/*.hlsl)
+#file(GLOB_RECURSE SOURCESFSR include/FSR_SDK/*.h include/FSR_SDK/*.cpp include/FSR_SDK/*.hlsl)
 
 add_library(
 	${PROJECT_NAME}
 	SHARED
 	${HLSL_FILES}
 	${SOURCES}
+	${SOURCESFSR}
 	${CMAKE_CURRENT_BINARY_DIR}/version.rc
 	.clang-format
 )
-
 
 #foreach(HLSL_FILE ${HLSL_FILES})
 # set_source_files_properties(${HLSL_FILE} PROPERTIES VS_SHADER_OBJECT_FILE_NAME "G:\\0p\\Steam\\steamapps\\common\\Fallout 4\\Data\\Shaders\\XiFeiLi\\%(Filename).cso" VS_SHADER_MODEL 5.0 VS_SHADER_ENTRYPOINT main)
@@ -154,19 +158,27 @@ target_include_directories(
 		#E:/CInclude
 		${CMAKE_CURRENT_BINARY_DIR}/include
 		${CMAKE_CURRENT_SOURCE_DIR}/src
+		#${CMAKE_CURRENT_SOURCE_DIR}/../DirectX-Headers/include
 		${CMAKE_CURRENT_SOURCE_DIR}/../imgui-1.86
+		${CMAKE_CURRENT_SOURCE_DIR}/../bsa
 		${CMAKE_CURRENT_SOURCE_DIR}/include
 
 )
 
+find_package(minhook CONFIG REQUIRED)
+
 target_link_libraries(
 	${PROJECT_NAME}
 	PRIVATE
+		#DirectX-Headers
+		minhook::minhook
 		CommonLibF4::CommonLibF4
 		spdlog::spdlog
 		ImGui186::ImGui186
+		bsa::bsa
 		${CMAKE_CURRENT_SOURCE_DIR}/lib/ffx_backend_dx12_x64.lib
 		${CMAKE_CURRENT_SOURCE_DIR}/lib/ffx_fsr2_x64.lib
+		${CMAKE_CURRENT_SOURCE_DIR}/lib/detours.X64/detours.lib
 		#FidelityFX-SDK
 )
 

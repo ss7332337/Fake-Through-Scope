@@ -21,6 +21,9 @@ set(SOURCES
 	src/HLSL/ScopeEffect_PS_Output.hlsl
 	src/HLSL/ScopeEffect_VS_Output.hlsl
 
+	#src/FSRImpl.h
+	#src/FSRImpl.cpp
+
 )
 	
 	

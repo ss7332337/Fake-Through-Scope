@@ -20,7 +20,7 @@ float4 main(float4 vpos : SV_Position, float2 texcoord : TEXCOORD0) : SV_Target
 	float2 mulTex = (texcoord - float2(0.5,0.5)) * rcp((ScopeEffect_Zoom) ) + float2(0.5,0.5);
 	float4 color = tBACKBUFFER.Sample(gSamLinear, mulTex);
 	
-	float2 ReticleCoord = aspect_ratio_correction(texcoord + Reticle_Offset);
+	float2 ReticleCoord = aspect_ratio_correction(texcoord - Reticle_Offset);
 	ReticleCoord = ((ReticleCoord - float2(0.5,0.5)) * 16 *rcp(ReticleSize)) + float2(0.5,0.5);
 
 	float4 ReticleColor = ReticleTex.Sample(gSamLinear,ReticleCoord);

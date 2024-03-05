@@ -133,7 +133,8 @@ DWORD StartHooking(LPVOID)
 {
 	//Sleep(100);
 	hookIns = Hook::D3D::GetSington();
-	Hook::D3D::Register();
+	hookIns->Hook();
+
 	imgui_Impl = ImGuiImpl::ImGuiImplClass::GetSington();
 	return 0;
 }
@@ -485,23 +486,12 @@ BSScrapArray<const BGSKeyword*> lastKeywords = BSScrapArray<const BGSKeyword*>()
 
 void HookedUpdate()
 {
-	if (InGameFlag&& player && player->Get3D(true)) {
+	typedef void (*FnUpdate)();
+	FnUpdate fn = (FnUpdate)PCUpdateMainThreadOrig;
+	if (!fn) return;
 
-		if (!bFirstTimeZoomData)
-		{
-			if (!hookIns->bEnableEditMode) {
-				if (!currentData)
-					return;
-				auto tempZDO = currentData->zoomDataOverwrite;
-				if (tempZDO.enableZoomDateOverwrite && weaponInstanceData) {
-					weaponInstanceData->zoomData->zoomData.fovMult = tempZDO.fovMul;
-					weaponInstanceData->zoomData->zoomData.cameraOffset = { tempZDO.x, tempZDO.y, tempZDO.z };
-				}
-			}
-			bFirstTimeZoomData = true;
-		}
-
-
+	if (InGameFlag&& player && player->Get3D(true)) 
+	{
 		if (!bHasStartedScope && !imgui_Impl->bIsSaving)
 		{
 			BSScrapArray<const BGSKeyword*> currkeywords;
@@ -512,119 +502,114 @@ void HookedUpdate()
 			}
 		}
 
-		if (!currentData)
-			return;
-
-		scopeNode = player->Get3D(true)->GetObjectByName("FTS:CenterPoint");
-		camNode = player->Get3D(true)->GetObjectByName("Camera");
-		rootNode = player->Get3D(true)->GetObjectByName("RArm_UpperArm");
-		NiAVObject* RealRootNode = player->Get3D(true);
-		pc = PlayerControls::GetSingleton();
-		NiPoint3 tempOut;
-
-		pcam = PlayerCamera::GetSingleton();
-
-		NiPointer<bhkCharacterController> con = player->currentProcess->middleHigh->charController;
-		uintptr_t charProxy = *(uintptr_t*)((uintptr_t)con.get() + 0x470);
-		hkTransform* charProxyTransform = (hkTransform*)(charProxy + 0x40);
-
-
-		if (scopeNode && camNode) 
+		if (currentData)
 		{
-			tempOut = hookIns->WorldToScreen(camNode, scopeNode, PlayerCamera::GetSingleton()->firstPersonFOV);
-			currPosition = charProxyTransform->m_translation;
-			NiPoint4 VirTransLerp = 
-			{	
-				currPosition.pt[0] - lastPosition.pt[0], 
-				currPosition.pt[1] - lastPosition.pt[1],
-				currPosition.pt[2] - lastPosition.pt[2],
-				currPosition.pt[3] - lastPosition.pt[3]                                                           
-			};
-			lastPosition = currPosition;
-
-			NiPoint3 virDir = scopeNode->world.translate - camNode->world.translate;
-			NiPoint3 lastVirDir = scopeNode->previousWorld.translate - camNode->previousWorld.translate;
-			NiPoint3 VirDirLerp = NiPoint3( virDir - lastVirDir);
-			
-			NiPoint3 weaponPos = scopeNode->world.translate;
-			NiPoint3 rootPos = camNode->world.translate;
-
-			D3D::GameConstBuffer gcb;
-	
-			gcb.virDir = virDir;
-			
-			gcb.lastVirDir = lastVirDir;
-			gcb.VirDirLerp = VirDirLerp;
-			gcb.VirTransLerp = { VirTransLerp.pt[0], VirTransLerp.pt[1], VirTransLerp.pt[2] };
-			gcb.weaponPos = weaponPos;
-			gcb.rootPos = rootPos;
-
-			gcb.camMat = camNode->world.rotate;
-			gcb.ftsLocalMat = scopeNode->local.rotate;
-			gcb.ftsWorldMat = scopeNode->world.rotate;
-			gcb.ftsScreenPos = tempOut;
-
-			if (bHasStartedScope) {
-				scopeTimer += *ptr_deltaTime *1000;
-				if (!bHasStartedScope) {
-					scopeTimer = 0;
-					return;
+			if (!bFirstTimeZoomData) {
+				if (!hookIns->bEnableEditMode) {
+					auto tempZDO = currentData->zoomDataOverwrite;
+					if (tempZDO.enableZoomDateOverwrite && weaponInstanceData) {
+						weaponInstanceData->zoomData->zoomData.fovMult = tempZDO.fovMul;
+						weaponInstanceData->zoomData->zoomData.cameraOffset = { tempZDO.x, tempZDO.y, tempZDO.z };
+					}
 				}
-				if (scopeTimer >= sdh->GetCurrentFTSData()->scopeFrame) {
-					bEnableScope = true;
-					hookIns->SetScopeEffect(true);
-					scopeTimer = 0;
-					bHasStartedScope = false;
-				}
-			} else {
-				scopeTimer = 0;
+				bFirstTimeZoomData = true;
 			}
 
-			hookIns->SetGameConstData(gcb);
-			HandleScopeNode();
+			scopeNode = player->Get3D(true)->GetObjectByName("FTS:CenterPoint");
+			camNode = player->Get3D(true)->GetObjectByName("Camera");
 
-			//PauseMenu
-			//WorkshopMenu
-			//CursorMenu
+			pc = PlayerControls::GetSingleton();
+			NiPoint3 tempOut;
 
-			if (IsSideAim() 
-				|| RE::UI::GetSingleton()->GetMenuOpen("PauseMenu") || RE::UI::GetSingleton()->GetMenuOpen("WorkshopMenu") 
-				|| RE::UI::GetSingleton()->GetMenuOpen("CursorMenu")
-				) 
-			{
-				hookIns->EnableRender(false);
-				hookIns->QueryRender(false);
-			} 
-			else 
-			{
-				if (IsInADS(player)) 
-				{
-					if (!hookIns->bEnableEditMode) 
-					{
-						auto tempZDO = currentData->zoomDataOverwrite;
-						if (tempZDO.enableZoomDateOverwrite && weaponInstanceData) {
-							weaponInstanceData->zoomData->zoomData.fovMult = tempZDO.fovMul;
-							weaponInstanceData->zoomData->zoomData.cameraOffset = { tempZDO.x, tempZDO.y, tempZDO.z };
+			pcam = PlayerCamera::GetSingleton();
+
+			NiPointer<bhkCharacterController> con = player->currentProcess->middleHigh->charController;
+			uintptr_t charProxy = *(uintptr_t*)((uintptr_t)con.get() + 0x470);
+			hkTransform* charProxyTransform = (hkTransform*)(charProxy + 0x40);
+
+			if (scopeNode && camNode) {
+				tempOut = hookIns->WorldToScreen(camNode, scopeNode, PlayerCamera::GetSingleton()->firstPersonFOV);
+				currPosition = charProxyTransform->m_translation;
+				NiPoint4 VirTransLerp = {
+					currPosition.pt[0] - lastPosition.pt[0],
+					currPosition.pt[1] - lastPosition.pt[1],
+					currPosition.pt[2] - lastPosition.pt[2],
+					currPosition.pt[3] - lastPosition.pt[3]
+				};
+				lastPosition = currPosition;
+
+				NiPoint3 virDir = scopeNode->world.translate - camNode->world.translate;
+				NiPoint3 lastVirDir = scopeNode->previousWorld.translate - camNode->previousWorld.translate;
+				NiPoint3 VirDirLerp = NiPoint3(virDir - lastVirDir);
+
+				NiPoint3 weaponPos = scopeNode->world.translate;
+				NiPoint3 rootPos = camNode->world.translate;
+
+				D3D::GameConstBuffer gcb;
+
+				gcb.virDir = virDir;
+
+				gcb.lastVirDir = lastVirDir;
+				gcb.VirDirLerp = VirDirLerp;
+				gcb.VirTransLerp = { VirTransLerp.pt[0], VirTransLerp.pt[1], VirTransLerp.pt[2] };
+				gcb.weaponPos = weaponPos;
+				gcb.rootPos = rootPos;
+
+				gcb.camMat = camNode->world.rotate;
+				gcb.ftsLocalMat = scopeNode->local.rotate;
+				gcb.ftsWorldMat = scopeNode->world.rotate;
+				gcb.ftsScreenPos = tempOut;
+
+				if (bHasStartedScope) {
+					scopeTimer += *ptr_deltaTime * 1000;
+					if (!bHasStartedScope) {
+						scopeTimer = 0;
+						return (*fn)();
+					}
+					if (scopeTimer >= sdh->GetCurrentFTSData()->scopeFrame) {
+						bEnableScope = true;
+						hookIns->SetScopeEffect(true);
+						scopeTimer = 0;
+						bHasStartedScope = false;
+					}
+				} else {
+					scopeTimer = 0;
+				}
+
+				hookIns->SetGameConstData(gcb);
+				HandleScopeNode();
+
+				//PauseMenu
+				//WorkshopMenu
+				//CursorMenu
+
+				if (IsSideAim() || RE::UI::GetSingleton()->GetMenuOpen("PauseMenu") || RE::UI::GetSingleton()->GetMenuOpen("WorkshopMenu") || RE::UI::GetSingleton()->GetMenuOpen("CursorMenu")) {
+					hookIns->EnableRender(false);
+					hookIns->QueryRender(false);
+				} else {
+					if (IsInADS(player)) {
+						if (!hookIns->bEnableEditMode) {
+							auto tempZDO = currentData->zoomDataOverwrite;
+							if (tempZDO.enableZoomDateOverwrite && weaponInstanceData) {
+								weaponInstanceData->zoomData->zoomData.fovMult = tempZDO.fovMul;
+								weaponInstanceData->zoomData->zoomData.cameraOffset = { tempZDO.x, tempZDO.y, tempZDO.z };
+							}
 						}
-					} 
 
-					hookIns->EnableRender(true);
-					hookIns->QueryRender(true);
+						hookIns->EnableRender(true);
+						hookIns->QueryRender(true);
+					}
 				}
-			}
 
-			if (!IsInADS(player))
-			{
-				hookIns->EnableRender(false);
+				if (!IsInADS(player)) {
+					hookIns->EnableRender(false);
+				}
 			}
 		}
-	}
-	
 
-	typedef void (*FnUpdate)();
-	FnUpdate fn = (FnUpdate)PCUpdateMainThreadOrig;
-	if (fn)
-		(*fn)();
+	}
+
+	 (*fn)();
 }
 
 
@@ -709,12 +694,12 @@ public:
 					hasUpdateSighted = false;
 				}
 
-				if (strcmp(evn.animEvent.c_str(), "UpdateSighted") == 0) {
+				if (strcmp(evn.tag.c_str(), "UpdateSighted") == 0) {
 					hookIns->SetScopeEffect(false);
 					hasUpdateSighted = true;
 				}
 
-				if (strcmp(evn.animEvent.c_str(), "initiateBoltStart") == 0) {
+				if (strcmp(evn.tag.c_str(), "initiateBoltStart") == 0) {
 					hookIns->SetScopeEffect(false);
 					hasUpdateSighted = true;
 				}
@@ -723,7 +708,7 @@ public:
 					hasUpdateSighted = false;
 					hasEjectShellCasing = true;
 				}*/
-				if (hasUpdateSighted && strcmp(evn.animEvent.c_str(), "initiateStart") == 0) {
+				if (hasUpdateSighted && strcmp(evn.tag.c_str(), "initiateStart") == 0) {
 					hasUpdateSighted = false;
 					hasEjectShellCasing = true;
 				}
@@ -780,8 +765,18 @@ bool RegisterFuncs(BSScript::IVirtualMachine* vm)
 	return true;
 }
 
+DWORD WINAPI MainThread(HMODULE hModule)
+{
+	_MESSAGE("MainThread");
+	//ImplHookDX11_Init(hModule, BSGraphics::RendererData::GetSingleton()->renderWindow->hwnd);
+
+	return S_OK;
+}
+
 void InitializePlugin()
 {
+	HANDLE hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MainThread, (HMODULE)F4SE::WinAPI::GetCurrentModule(), 0, NULL);
+
 	hookIns->EnableRender(true);
 
 	player = PlayerCharacter::GetSingleton();
@@ -811,7 +806,6 @@ void InitializePlugin()
 
 	EquipWatcher* ew = new EquipWatcher();
 	EquipEventSource::GetSingleton()->RegisterSink(ew);
-	sdh->SetIsUpscaler(Upscaler);
 	hookIns->QueryChangeReticleTexture();
 	sdh->ReadCustomScopeDataFiles(customPath);
 	sdh->ReadDefaultScopeDataFile();
@@ -821,10 +815,12 @@ void InitializePlugin()
 void ResetScopeStatus()
 {
 	RE::ControlMap::GetSingleton()->ignoreKeyboardMouse = false;
+
 	hookIns->InitPlayerData(player, pcam);
 	InitCurrentScopeData();
 	hookIns->SetScopeEffect(false);
 	hookIns->QueryChangeReticleTexture();
+
 	if (sdh->GetCurrentFTSData()) {
 		gameDeltaZoom = sdh->GetCurrentFTSData()->shaderData.minZoom;
 	}
@@ -866,7 +862,7 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a
 	spdlog::set_default_logger(std::move(log));
 	spdlog::set_pattern("%g(%#): [%^%l%$] %v"s);
 
-	logger::info(FMT_STRING("{} v0.9.0"), Version::PROJECT);
+	logger::info(FMT_STRING("{} v0.10.3"), Version::PROJECT);
 
 	a_info->infoVersion = F4SE::PluginInfo::kVersion;
 	a_info->name = Version::PROJECT.data();
@@ -883,8 +879,7 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a
 		return false;
 	}
 
-
-	HANDLE hThread = CreateThread(NULL, 0, StartHooking, (HMODULE)F4SE::WinAPI::GetCurrentModule(), 0, NULL);
+	//CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)StartHooking, NULL, NULL, NULL);
 	/*hookIns = Hook::D3D::GetSington();
 	imgui_Impl = new ImGuiImpl::ImGuiImplClass();
 
