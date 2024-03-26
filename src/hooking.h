@@ -11,7 +11,7 @@
 #include <ImGuiImpl.h>
 #include "FTSData.h"
 
-
+#define D3D11_HOOK_API
 #define SAFE_RELEASE(p) { if ((p)) { (p)->Release(); (p) = nullptr; } }
 #ifndef HR
 #	define HR(x) { HRESULT hr = (x);  if (FAILED(hr)) {_MESSAGE("[-] %s, %i, %i",__FILE__, __LINE__ , hr);}}
@@ -19,7 +19,7 @@
 
 void SafeWriteBuf(uintptr_t addr, void* data, size_t len);
 void SafeWrite64(uintptr_t addr, UInt64 data);
-void* GetIATAddr(void* module, const char* searchDllName, const char* searchImportName);
+//void* GetIATAddr(void* module, const char* searchDllName, const char* searchImportName);
 
 template <class T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;
@@ -36,23 +36,23 @@ namespace Hook
 		LPCSTR shaderModel,
 		ID3DBlob** ppBlobOut);
 
-	template <typename Func>
-	inline void HookImportFunc(const char* dll, const char* nameFunc, Func& oldFn, std::uintptr_t hookFn)
-	{
-		std::uintptr_t thunkAddress = (std::uintptr_t)GetIATAddr((UINT8*)GetModuleHandle(NULL), dll, nameFunc);
-		oldFn = (Func) * (std::uintptr_t*)thunkAddress;
-		SafeWrite64(thunkAddress, hookFn);
-	}
+	//template <typename Func>
+	//inline void HookImportFunc(const char* dll, const char* nameFunc, Func& oldFn, std::uintptr_t hookFn)
+	//{
+	//	std::uintptr_t thunkAddress = (std::uintptr_t)GetIATAddr((UINT8*)GetModuleHandle(NULL), dll, nameFunc);
+	//	oldFn = (Func) * (std::uintptr_t*)thunkAddress;
+	//	SafeWrite64(thunkAddress, hookFn);
+	//}
 
-	inline std::uintptr_t HookFunc(std::uintptr_t* vtbl, int index, std::uintptr_t hookFn, std::uintptr_t* oldFn)
-	{
-		std::uintptr_t returnAddy = vtbl[index];
-		*oldFn = returnAddy;
+	//inline std::uintptr_t HookFunc(std::uintptr_t* vtbl, int index, std::uintptr_t hookFn, std::uintptr_t* oldFn)
+	//{
+	//	std::uintptr_t returnAddy = vtbl[index];
+	//	*oldFn = returnAddy;
 
-		SafeWrite64((std::uintptr_t)(vtbl + index), hookFn);
+	//	SafeWrite64((std::uintptr_t)(vtbl + index), hookFn);
 
-		return returnAddy;
-	}
+	//	return returnAddy;
+	//}
 	using namespace DirectX;
 
 	class D3D
@@ -77,8 +77,17 @@ namespace Hook
 		typedef void(__stdcall* tdefDrawIndexed)(ID3D11DeviceContext*, UINT, UINT, INT);
 		typedef HRESULT(__stdcall* tdefCreateBuffer)(ID3D11Device*, struct D3D11_BUFFER_DESC const*, struct D3D11_SUBRESOURCE_DATA const*, struct ID3D11Buffer**);
 
+		typedef HRESULT(__stdcall* D3D11PresentHook)(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags);
+		typedef void(__stdcall* D3D11DrawIndexedHook)(ID3D11DeviceContext* pContext, UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation);
+		typedef void(__stdcall* D3D11CreateQueryHook)(ID3D11Device* pDevice, const D3D11_QUERY_DESC* pQueryDesc, ID3D11Query** ppQuery);
+		typedef void(__stdcall* D3D11PSSetShaderResourcesHook)(ID3D11DeviceContext* pContext, UINT StartSlot, UINT NumViews, ID3D11ShaderResourceView* const* ppShaderResourceViews);
+		typedef void(__stdcall* D3D11ClearRenderTargetViewHook)(ID3D11DeviceContext* pContext, ID3D11RenderTargetView* pRenderTargetView, const FLOAT ColorRGBA[4]);
+
+
+
 	public:
 		tdefDrawIndexed tdefDrawIndexed_t;
+		
 
 	private:
 		static std::once_flag flagOnce;
@@ -187,7 +196,8 @@ namespace Hook
 
 	public:
 
-		void __stdcall Hook();
+		D3D11_HOOK_API void ImplHookDX11_Init(HMODULE hModule, void* hwnd);
+		//void __stdcall Hook();
 		void EnableRender(bool flag) { isEnableRender = flag; }
 		void Render();
 		bool InitEffect();
@@ -224,13 +234,22 @@ namespace Hook
 		D3D& operator=(D3D&&) = delete;
 
 		static HRESULT GetDeviceAndCtxFromSwapchain(IDXGISwapChain* pSwapChain, ID3D11Device** ppDevice, ID3D11DeviceContext** ppContext);
-		static void __stdcall DrawIndexedHook(ID3D11DeviceContext* pContext, UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation);
-		static HRESULT __fastcall PresentHook(IDXGISwapChain*, UINT, UINT);
+		//static HRESULT __fastcall PresentHook(IDXGISwapChain*, UINT, UINT);
 
 		static HRESULT __stdcall D3D11CreateDeviceAndSwapChainHook(IDXGIAdapter*, D3D_DRIVER_TYPE, HMODULE, UINT, const D3D_FEATURE_LEVEL*, UINT, UINT, const DXGI_SWAP_CHAIN_DESC*, IDXGISwapChain**, ID3D11Device**, D3D_FEATURE_LEVEL*, ID3D11DeviceContext**);
 		static LRESULT __stdcall WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 		static BOOL __stdcall ClipCursorHook(RECT*);
 		static void __stdcall vsSetConstantBuffers(ID3D11DeviceContext* pContext, UINT, UINT, ID3D11Buffer* const*);
+
+		D3D11_HOOK_API void ImplHookDX11_Present(ID3D11Device* device, ID3D11DeviceContext* ctx, IDXGISwapChain* swap_chain);
+
+		static HRESULT __stdcall PresentHook(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags);
+		static void __stdcall DrawIndexedHook(ID3D11DeviceContext* pContext, UINT IndexCount, UINT StartIndexLocation, INT BaseVertexLocation);
+		static void __stdcall hookD3D11CreateQuery(ID3D11Device* pDevice, const D3D11_QUERY_DESC* pQueryDesc, ID3D11Query** ppQuery);
+		static void __stdcall hookD3D11PSSetShaderResources(ID3D11DeviceContext* pContext, UINT StartSlot, UINT NumViews, ID3D11ShaderResourceView* const* ppShaderResourceViews);
+		static void __stdcall ClearRenderTargetViewHook(ID3D11DeviceContext* pContext, ID3D11RenderTargetView* pRenderTargetView, const FLOAT ColorRGBA[4]);
+		DWORD __stdcall HookDX11_Init();
+		
 
 		
 		struct ImageSpaceEffectTemporalAA_Render;
@@ -258,6 +277,12 @@ namespace Hook
 
 			tdefDrawIndexed drawIndexed;
 			tdefCreateBuffer createBuffer;
+
+			D3D11PresentHook phookD3D11Present = nullptr;
+			D3D11DrawIndexedHook phookD3D11DrawIndexed = nullptr;
+			D3D11CreateQueryHook phookD3D11CreateQuery = nullptr;
+			D3D11PSSetShaderResourcesHook phookD3D11PSSetShaderResources = nullptr;
+			D3D11ClearRenderTargetViewHook phookD3D11ClearRenderTargetViewHook = nullptr;
 		};
 
 	public:

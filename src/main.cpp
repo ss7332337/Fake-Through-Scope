@@ -133,7 +133,7 @@ DWORD StartHooking(LPVOID)
 {
 	//Sleep(100);
 	hookIns = Hook::D3D::GetSington();
-	hookIns->Hook();
+	//hookIns->Hook();
 
 	imgui_Impl = ImGuiImpl::ImGuiImplClass::GetSington();
 	return 0;
@@ -768,6 +768,12 @@ bool RegisterFuncs(BSScript::IVirtualMachine* vm)
 DWORD WINAPI MainThread(HMODULE hModule)
 {
 	_MESSAGE("MainThread");
+
+	hookIns = Hook::D3D::GetSington();
+	hookIns->ImplHookDX11_Init(hModule, BSGraphics::RendererData::GetSingleton()->renderWindow->hwnd);
+
+	imgui_Impl = ImGuiImpl::ImGuiImplClass::GetSington();
+	hookIns->SetImGuiImplClass(imgui_Impl);
 	//ImplHookDX11_Init(hModule, BSGraphics::RendererData::GetSingleton()->renderWindow->hwnd);
 
 	return S_OK;
