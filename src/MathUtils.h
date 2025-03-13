@@ -1,8 +1,9 @@
 #pragma once
-#include "RE/NetImmerse/NiMatrix3.h"
-#include "RE/NetImmerse/NiPoint3.h"
+#include "RE/NetImmerse/NiMatrix3.hpp"
+#include "RE/NetImmerse/NiPoint.hpp"
 #include <cmath>
 #include <cstdint>
+#include <d3d11.h>
 
 #ifndef MATH_PI
 #	define MATH_PI 3.14159265358979323846
@@ -18,6 +19,26 @@ typedef std::array<float, 3> float3;
 typedef std::array<float3, 3> float3x3;
 
 const float PI = 3.14159265358979323846264f;
+
+namespace detail
+{
+
+	// 通用向量复制工具
+	template <typename TDst, typename TSrc>
+	inline void CopyVector3(TDst& dst, const TSrc& src)
+	{
+		dst.x = src.x;
+		dst.y = src.y;
+		dst.z = src.z;
+	}
+
+	template <typename TDst, typename TSrc>
+	inline void CopyVector2(TDst& dst, const TSrc& src)
+	{
+		dst.x = src.x;
+		dst.y = src.y;
+	}
+}
 
 bool closeEnough(const float& a, const float& b, const float& epsilon = std::numeric_limits<float>::epsilon())
 {
@@ -86,10 +107,10 @@ class NiMatrix4
 public:
 	void MakeIdentity() noexcept
 	{
-		entry[0].v = { 1.0F, 0.0F, 0.0F, 0.0F };
-		entry[1].v = { 0.0F, 1.0F, 0.0F, 0.0F };
-		entry[2].v = { 0.0F, 0.0F, 1.0F, 0.0F };
-		entry[3].v = { 0.0F, 0.0F, 0.0F, 1.0F };
+		entry[0] = { 1.0F, 0.0F, 0.0F, 0.0F };
+		entry[1] = { 0.0F, 1.0F, 0.0F, 0.0F };
+		entry[2] = { 0.0F, 0.0F, 1.0F, 0.0F };
+		entry[3] = { 0.0F, 0.0F, 0.0F, 1.0F };
 	}
 
 	// members
@@ -99,10 +120,10 @@ public:
 	RE::NiPoint4 operator*(const RE::NiPoint4& p) const
 	{
 		return RE::NiPoint4{
-			entry[0].pt[0] * p.v.x + entry[0].pt[1] * p.v.y + entry[0].pt[2] * p.v.z + entry[0].pt[3] * p.v.w,
-			entry[1].pt[0] * p.v.x + entry[1].pt[1] * p.v.y + entry[1].pt[2] * p.v.z + entry[1].pt[3] * p.v.w,
-			entry[2].pt[0] * p.v.x + entry[2].pt[1] * p.v.y + entry[2].pt[2] * p.v.z + entry[2].pt[3] * p.v.w,
-			entry[3].pt[0] * p.v.x + entry[3].pt[1] * p.v.y + entry[3].pt[2] * p.v.z + entry[3].pt[3] * p.v.w
+			entry[0].x * p.x + entry[0].y * p.y + entry[0].z * p.z + entry[0].w * p.w,
+			entry[1].x * p.x + entry[1].y * p.y + entry[1].z * p.z + entry[1].w * p.w,
+			entry[2].x * p.x + entry[2].y * p.y + entry[2].z * p.z + entry[2].w * p.w,
+			entry[3].x * p.x + entry[3].y * p.y + entry[3].z * p.z + entry[3].w * p.w
 		};
 	}
 };
@@ -110,10 +131,10 @@ public:
 NiMatrix4 ToQ(const RE::NiMatrix3& p)
 {
 	NiMatrix4 tmp;
-	tmp.entry[0].v = p.entry[0].v;
-	tmp.entry[1].v = p.entry[1].v;
-	tmp.entry[2].v = p.entry[2].v;
-	tmp.entry[3].v = { 0, 0, 0, 1 };
+	tmp.entry[0] = p.entry[0];
+	tmp.entry[1] = p.entry[1];
+	tmp.entry[2] = p.entry[2];
+	tmp.entry[3] = { 0, 0, 0, 1 };
 
 	return tmp;
 }
@@ -121,9 +142,9 @@ NiMatrix4 ToQ(const RE::NiMatrix3& p)
 RE::NiPoint3 MatMulNi3(RE::NiMatrix3 mat, RE::NiPoint3 p)
 {
 	return RE::NiPoint3(
-		mat.entry[0].v.x * p.x + mat.entry[0].v.y * p.y + mat.entry[0].v.z * p.z,
-		mat.entry[1].v.x * p.x + mat.entry[1].v.y * p.y + mat.entry[1].v.z * p.z,
-		mat.entry[2].v.x * p.x + mat.entry[2].v.y * p.y + mat.entry[2].v.z * p.z);
+		mat.entry[0].x * p.x + mat.entry[0].y * p.y + mat.entry[0].z * p.z,
+		mat.entry[1].x * p.x + mat.entry[1].y * p.y + mat.entry[1].z * p.z,
+		mat.entry[2].x * p.x + mat.entry[2].y * p.y + mat.entry[2].z * p.z);
 }
 
 
@@ -131,29 +152,29 @@ RE::NiPoint3 MatMulNi3(RE::NiMatrix3 mat, RE::NiPoint3 p)
 
 void SetMatrix33(float a, float b, float c, float d, float e, float f, float g, float h, float i, NiMatrix3& mat)
 {
-	mat.entry[0].pt[0] = a;
-	mat.entry[0].pt[1] = b;
-	mat.entry[0].pt[2] = c;
-	mat.entry[1].pt[0] = d;
-	mat.entry[1].pt[1] = e;
-	mat.entry[1].pt[2] = f;
-	mat.entry[2].pt[0] = g;
-	mat.entry[2].pt[1] = h;
-	mat.entry[2].pt[2] = i;
+	mat.entry[0].x = a;
+	mat.entry[0].y = b;
+	mat.entry[0].z = c;
+	mat.entry[1].x = d;
+	mat.entry[1].y = e;
+	mat.entry[1].z = f;
+	mat.entry[2].x = g;
+	mat.entry[2].y = h;
+	mat.entry[2].z = i;
 }
 
 NiMatrix3 Transpose(NiMatrix3 mat)
 {
 	NiMatrix3 trans;
-	float a = mat.entry[0].pt[0];
-	float b = mat.entry[0].pt[1];
-	float c = mat.entry[0].pt[2];
-	float d = mat.entry[1].pt[0];
-	float e = mat.entry[1].pt[1];
-	float f = mat.entry[1].pt[2];
-	float g = mat.entry[2].pt[0];
-	float h = mat.entry[2].pt[1];
-	float i = mat.entry[2].pt[2];
+	float a = mat.entry[0].x;
+	float b = mat.entry[0].y;
+	float c = mat.entry[0].z;
+	float d = mat.entry[1].x;
+	float e = mat.entry[1].y;
+	float f = mat.entry[1].z;
+	float g = mat.entry[2].x;
+	float h = mat.entry[2].y;
+	float i = mat.entry[2].z;
 	SetMatrix33(a, d, g,
 		b, e, h,
 		c, f, i, trans);
@@ -234,7 +255,7 @@ NiMatrix3 Quaternion::ToRotationMatrix33()
 //Sarrus rule
 float Determinant(NiMatrix3 mat)
 {
-	return mat.entry[0].pt[0] * mat.entry[1].pt[1] * mat.entry[2].pt[2] + mat.entry[0].pt[1] * mat.entry[1].pt[2] * mat.entry[2].pt[0] + mat.entry[0].pt[2] * mat.entry[1].pt[0] * mat.entry[2].pt[1] - mat.entry[0].pt[2] * mat.entry[1].pt[1] * mat.entry[2].pt[0] - mat.entry[0].pt[1] * mat.entry[1].pt[0] * mat.entry[2].pt[2] - mat.entry[0].pt[0] * mat.entry[1].pt[2] * mat.entry[2].pt[1];
+	return mat.entry[0].x * mat.entry[1].y * mat.entry[2].z + mat.entry[0].y * mat.entry[1].z * mat.entry[2].x + mat.entry[0].z * mat.entry[1].x * mat.entry[2].y - mat.entry[0].z * mat.entry[1].y * mat.entry[2].x - mat.entry[0].y * mat.entry[1].x * mat.entry[2].z - mat.entry[0].x * mat.entry[1].z * mat.entry[2].y;
 }
 
 NiMatrix3 Inverse(NiMatrix3 mat)
@@ -245,15 +266,15 @@ NiMatrix3 Inverse(NiMatrix3 mat)
 		idmat.MakeIdentity();
 		return idmat;
 	}
-	float a = mat.entry[0].pt[0];
-	float b = mat.entry[0].pt[1];
-	float c = mat.entry[0].pt[2];
-	float d = mat.entry[1].pt[0];
-	float e = mat.entry[1].pt[1];
-	float f = mat.entry[1].pt[2];
-	float g = mat.entry[2].pt[0];
-	float h = mat.entry[2].pt[1];
-	float i = mat.entry[2].pt[2];
+	float a = mat.entry[0].x;
+	float b = mat.entry[0].y;
+	float c = mat.entry[0].z;
+	float d = mat.entry[1].x;
+	float e = mat.entry[1].y;
+	float f = mat.entry[1].z;
+	float g = mat.entry[2].x;
+	float h = mat.entry[2].y;
+	float i = mat.entry[2].z;
 	NiMatrix3 invmat;
 	SetMatrix33(e * i - f * h, -(b * i - c * h), b * f - c * e,
 		-(d * i - f * g), a * i - c * g, -(a * f - c * d),
@@ -264,12 +285,12 @@ NiMatrix3 Inverse(NiMatrix3 mat)
 
 NiPoint3 ToDirectionVector(NiMatrix3 mat)
 {
-	return NiPoint3(mat.entry[2].pt[0], mat.entry[2].pt[1], mat.entry[2].pt[2]);
+	return NiPoint3(mat.entry[2].x, mat.entry[2].y, mat.entry[2].z);
 }
 
 NiPoint3 ToUpVector(NiMatrix3 mat)
 {
-	return NiPoint3(mat.entry[1].pt[0], mat.entry[1].pt[1], mat.entry[1].pt[2]);
+	return NiPoint3(mat.entry[1].x, mat.entry[1].y, mat.entry[1].z);
 }
 
 //(Rotation Matrix)^-1 * (World pos - Local Origin)
@@ -280,17 +301,17 @@ NiPoint3 WorldToLocal(NiPoint3 wpos, NiPoint3 lorigin, NiMatrix3 rot)
 
 
 	return NiPoint3(
-		invrot.entry[0].pt[0] * lpos.x + invrot.entry[0].pt[1] * lpos.y + invrot.entry[0].pt[2] * lpos.z,
-		invrot.entry[1].pt[0] * lpos.x + invrot.entry[1].pt[1] * lpos.y + invrot.entry[1].pt[2] * lpos.z,
-		invrot.entry[2].pt[0] * lpos.x + invrot.entry[2].pt[1] * lpos.y + invrot.entry[2].pt[2] * lpos.z);
+		invrot.entry[0].x * lpos.x + invrot.entry[0].y * lpos.y + invrot.entry[0].z * lpos.z,
+		invrot.entry[1].x * lpos.x + invrot.entry[1].y * lpos.y + invrot.entry[1].z * lpos.z,
+		invrot.entry[2].x * lpos.x + invrot.entry[2].y * lpos.y + invrot.entry[2].z * lpos.z);
 }
 
 NiPoint3 LocalToWorld(NiPoint3 lpos, NiPoint3 lorigin, NiMatrix3 rot)
 {
 	return NiPoint3(
-			   rot.entry[0].pt[0] * lpos.x + rot.entry[0].pt[1] * lpos.y + rot.entry[0].pt[2] * lpos.z,
-			   rot.entry[1].pt[0] * lpos.x + rot.entry[1].pt[1] * lpos.y + rot.entry[1].pt[2] * lpos.z,
-			   rot.entry[2].pt[0] * lpos.x + rot.entry[2].pt[1] * lpos.y + rot.entry[2].pt[2] * lpos.z) 
+			   rot.entry[0].x * lpos.x + rot.entry[0].y * lpos.y + rot.entry[0].z * lpos.z,
+			   rot.entry[1].x * lpos.x + rot.entry[1].y * lpos.y + rot.entry[1].z * lpos.z,
+			   rot.entry[2].x * lpos.x + rot.entry[2].y * lpos.y + rot.entry[2].z * lpos.z) 
 		
 	       + lorigin;
 }

@@ -20,6 +20,7 @@ set(SOURCES
 	src/HLSL/ScopeEffect_VS.hlsl
 	src/HLSL/ScopeEffect_PS_Output.hlsl
 	src/HLSL/ScopeEffect_VS_Output.hlsl
+	include/renderdoc_app.h
 
 	#src/FSRImpl.h
 	#src/FSRImpl.cpp

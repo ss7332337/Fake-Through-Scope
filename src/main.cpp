@@ -1,11 +1,6 @@
-#include <d3d11.h>
 #include "FTSData.h"
-#include "RE/Havok/hkVector4.h"
-#include <hooking.h>
-#include <DirectXMath.h>
-#include <d3d11_1.h>
 #include "ImGuiImpl.h"
-#include "MathUtils.h"
+#include <hooking.h>
 
 using namespace RE;
 using namespace BSScript;
@@ -64,8 +59,9 @@ HMODULE Upscaler;
 
 NiPoint4 lastPosition;
 NiPoint4 currPosition;
-REL::Relocation<float*> ptr_deltaTime{ REL::ID(1013228) };
-
+//float* ptr_deltaTime;
+BSTimer* uiTimer;
+//float deltaTime;
 
 REL::Relocation<uintptr_t> ptr_PCUpdateMainThread{ REL::ID(633524), 0x22D };
 uintptr_t PCUpdateMainThreadOrig;
@@ -80,7 +76,9 @@ using namespace Hook;
 D3D* hookIns;
 ImGuiImpl::ImGuiImplClass* imgui_Impl;
 
+
 char* _MESSAGE(const char* fmt, ...);
+
 
 template <class Ty>
 Ty SafeWrite64Function(uintptr_t addr, Ty data)
@@ -141,7 +139,7 @@ DWORD StartHooking(LPVOID)
 
 bool compareByEditorID(const string& a, const BGSKeyword* b)
 {
-	return a == b->formEditorID || a.empty();
+	return a.c_str() == b->formEditorID || a.empty();
 }
 
 bool IssueChangeAnim(std::monostate, BGSKeyword* keyword)
@@ -156,7 +154,7 @@ int testDegree = 0;
 
 bool TestButton(std::monostate)
 {
-	NiPoint3 pos, dir;
+	/*NiPoint3 pos, dir;
 	NiPoint3 right = NiPoint3(-1, 0, 0);
 	player-> GetEyeVector(pos, dir, true);
 	NiPoint3 heading = Normalize(NiPoint3(dir.x, dir.y, 0));
@@ -164,7 +162,9 @@ bool TestButton(std::monostate)
 	testDegree += 5;
 
 	NiMatrix3 rot = scopeNode->parent->parent->world.rotate * GetRotationMatrix33(heading, testDegree * toRad) * Transpose(scopeNode->parent->parent->world.rotate);
-	scopeNode->parent->local.rotate = rot;
+	scopeNode->parent->local.rotate = rot;*/
+	//auto camStat = &BSGraphics::State::GetSingleton();
+	//camStat->cameraState.camViewData.inv1stPersonProjMat = {};
 
 	return true;
 }
@@ -494,9 +494,10 @@ void HookedUpdate()
 	{
 		if (!bHasStartedScope && !imgui_Impl->bIsSaving)
 		{
+			//需要优化，尝试haskeyword可不可行
 			BSScrapArray<const BGSKeyword*> currkeywords;
 			player->CollectAllKeywords(currkeywords, nullptr);
-			if (lastKeywords.empty() || lastKeywords != currkeywords) {
+			if (lastKeywords.empty() || !std::equal(lastKeywords.begin(), lastKeywords.end(), currkeywords.begin())) {
 				InitCurrentScopeData();
 				lastKeywords = currkeywords;
 			}
@@ -528,13 +529,13 @@ void HookedUpdate()
 			hkTransform* charProxyTransform = (hkTransform*)(charProxy + 0x40);
 
 			if (scopeNode && camNode) {
-				tempOut = hookIns->WorldToScreen(camNode, scopeNode, PlayerCamera::GetSingleton()->firstPersonFOV);
-				currPosition = charProxyTransform->m_translation;
+				tempOut = hookIns->WorldToScreen(camNode, scopeNode, 90);
+				currPosition = charProxyTransform->translation;
 				NiPoint4 VirTransLerp = {
-					currPosition.pt[0] - lastPosition.pt[0],
-					currPosition.pt[1] - lastPosition.pt[1],
-					currPosition.pt[2] - lastPosition.pt[2],
-					currPosition.pt[3] - lastPosition.pt[3]
+					currPosition.x - lastPosition.x,
+					currPosition.y - lastPosition.y,
+					currPosition.z - lastPosition.z,
+					currPosition.w - lastPosition.w
 				};
 				lastPosition = currPosition;
 
@@ -551,7 +552,7 @@ void HookedUpdate()
 
 				gcb.lastVirDir = lastVirDir;
 				gcb.VirDirLerp = VirDirLerp;
-				gcb.VirTransLerp = { VirTransLerp.pt[0], VirTransLerp.pt[1], VirTransLerp.pt[2] };
+				gcb.VirTransLerp = { VirTransLerp.x, VirTransLerp.y, VirTransLerp.z };
 				gcb.weaponPos = weaponPos;
 				gcb.rootPos = rootPos;
 
@@ -561,7 +562,7 @@ void HookedUpdate()
 				gcb.ftsScreenPos = tempOut;
 
 				if (bHasStartedScope) {
-					scopeTimer += *ptr_deltaTime * 1000;
+					scopeTimer += uiTimer->delta * 1000;
 					if (!bHasStartedScope) {
 						scopeTimer = 0;
 						return (*fn)();
@@ -622,19 +623,19 @@ class EquipWatcher : public BSTEventSink<TESEquipEvent>
 public:
 	virtual BSEventNotifyControl ProcessEvent(const TESEquipEvent& evn, BSTEventSource<TESEquipEvent>* a_source)
 	{
-		Actor* a = evn.a;
+		Actor* a = evn.actor->As<Actor>();
 
 		if (a == player) {
 
-			TESForm* item = TESForm::GetFormByID(evn.formId);
+			TESForm* item = TESForm::GetFormByID(evn.baseObject);
 			/*reshade::log_message(4, "" + evn.formId);
 			reshade::log_message(4, "Player!");*/
 			
-			if (evn.isEquip) {
+			if (evn.equipped) {
 				
 			}
 
-			if (evn.isEquip && item && item->formType == ENUM_FORM_ID::kWEAP) {
+			if (evn.equipped && item && item->formType == ENUM_FORMTYPE::kWEAP) {
 				hookIns->QueryRender(false);
 				sdh->SetCurrentFTSData(nullptr);
 				InitCurrentScopeData();
@@ -768,6 +769,18 @@ bool RegisterFuncs(BSScript::IVirtualMachine* vm)
 DWORD WINAPI MainThread(HMODULE hModule)
 {
 	_MESSAGE("MainThread");
+	
+
+	while (!BSGraphics::RendererData::GetSingleton() 
+		|| !BSGraphics::RendererData::GetSingleton()->renderWindow 
+		|| !BSGraphics::RendererData::GetSingleton()->renderWindow->hwnd 
+		|| !BSGraphics::RendererData::GetSingleton()->renderWindow->swapChain 
+		|| !RE::BSGraphics::RendererData::GetSingleton()->device
+		|| !RE::BSGraphics::RendererData::GetSingleton()->context) {
+		Sleep(10);
+	}
+
+
 
 	hookIns = Hook::D3D::GetSington();
 	hookIns->ImplHookDX11_Init(hModule, BSGraphics::RendererData::GetSingleton()->renderWindow->hwnd);
@@ -779,9 +792,30 @@ DWORD WINAPI MainThread(HMODULE hModule)
 	return S_OK;
 }
 
+void TestingThread()
+{
+	
+	while (true) {
+		auto bstimer = UI::GetSingleton()->uiTimer;
+		auto gameVm  = GameVM::GetSingleton()->profiler.timer;
+		if (&bstimer && GameVM::GetSingleton() && &gameVm)
+		{
+			Sleep(100);
+		}
+	}
+}
+
 void InitializePlugin()
 {
-	HANDLE hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MainThread, (HMODULE)F4SE::WinAPI::GetCurrentModule(), 0, NULL);
+	HANDLE hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MainThread, (HMODULE)REX::W32::GetCurrentModule(), 0, NULL);
+#ifdef _DEBUG
+	HANDLE hThread1 = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)TestingThread, (HMODULE)REX::W32::GetCurrentModule(), 0, NULL);
+#endif
+	uiTimer = &UI::GetSingleton()->uiTimer;
+
+	logger::warn("ptr_PCUpdateMainThread.address: {}", ptr_PCUpdateMainThread.address());
+	logger::warn("ptr_PCUpdateMainThread.offset: {}", ptr_PCUpdateMainThread.offset());
+	logger::warn("threadID: {}", RE::Main::GetSingleton()->threadID);
 
 	hookIns->EnableRender(true);
 
@@ -811,7 +845,7 @@ void InitializePlugin()
 	
 
 	EquipWatcher* ew = new EquipWatcher();
-	EquipEventSource::GetSingleton()->RegisterSink(ew);
+	TESEquipEvent::GetSingleton()->RegisterSink(ew);
 	hookIns->QueryChangeReticleTexture();
 	sdh->ReadCustomScopeDataFiles(customPath);
 	sdh->ReadDefaultScopeDataFile();
@@ -840,9 +874,16 @@ void ResetScopeStatus()
 
 
 
-extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a_f4se, F4SE::PluginInfo* a_info)
+F4SE_EXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a_f4se, F4SE::PluginInfo* a_info)
 {
-	
+	a_info->infoVersion = F4SE::PluginInfo::kVersion;
+	a_info->name = "FakeThroughScope";
+	a_info->version = 1;
+
+	a_info->infoVersion = F4SE::PluginInfo::kVersion;
+	a_info->name = Version::PROJECT.data();
+	a_info->version = Version::MAJOR;
+
 
 #ifndef NDEBUG
 	auto sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
@@ -868,22 +909,22 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a
 	spdlog::set_default_logger(std::move(log));
 	spdlog::set_pattern("%g(%#): [%^%l%$] %v"s);
 
-	logger::info(FMT_STRING("{} v0.10.3"), Version::PROJECT);
+	logger::info(FMT_STRING("{} v{}.{}.{}"), Version::PROJECT, Version::MAJOR, Version::MINOR, Version::PATCH);
 
-	a_info->infoVersion = F4SE::PluginInfo::kVersion;
-	a_info->name = Version::PROJECT.data();
-	a_info->version = Version::MAJOR;
 
 	if (a_f4se->IsEditor()) {
-		logger::critical("loaded in editor"sv);
+		logger::critical("loaded in editor");
 		return false;
 	}
 
 	const auto ver = a_f4se->RuntimeVersion();
-	if (ver < F4SE::RUNTIME_1_10_162) {
-		logger::critical(FMT_STRING("unsupported runtime v{}"), ver.string());
+	if ((REL::Module::IsF4() && ver < F4SE::RUNTIME_1_10_163) ||
+		(REL::Module::IsVR() && ver < F4SE::RUNTIME_LATEST_VR)) {
+		logger::critical("unsupported runtime v{}", ver.string());
 		return false;
 	}
+
+	logger::info("FakeThroughScope Loaded!");
 
 	//CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)StartHooking, NULL, NULL, NULL);
 	/*hookIns = Hook::D3D::GetSington();
@@ -895,23 +936,24 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a
 
 	
 	F4SE::AllocTrampoline(8 * 8);
+	
 
 	return true;
 }
 
 
-extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Load(const F4SE::LoadInterface* a_f4se)
+F4SE_PLUGIN_LOAD(const F4SE::LoadInterface* a_f4se)
 {
 #ifdef _DEBUG
-	while (!IsDebuggerPresent()) {
-	}
+	//while (!IsDebuggerPresent()) {
+	//}
+	//Sleep(1000);
 #endif
 
 	F4SE::Init(a_f4se);
 
 	F4SE::Trampoline& trampoline = F4SE::GetTrampoline();
 	PCUpdateMainThreadOrig = trampoline.write_call<5>(ptr_PCUpdateMainThread.address(), &HookedUpdate);
-	
 
 	const F4SE::PapyrusInterface* papyrus = F4SE::GetPapyrusInterface();
 	bool succ = papyrus->Register(RegisterFuncs);
@@ -921,26 +963,52 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Load(const F4SE::LoadInterface* a_f
 
 	const F4SE::MessagingInterface* message = F4SE::GetMessagingInterface();
 	message->RegisterListener([](F4SE::MessagingInterface::Message* msg) -> void {
+		if (msg->type == F4SE::MessagingInterface::kPostLoad) {
+			//if (MH_CreateHookApiEx(L"dxgi.dll", "D3D11CreateDeviceAndSwapChain", Hooked_D3D11CreateDeviceAndSwapChain, (LPVOID*)&fpOriginalD3D11CreateDeviceAndSwapChain, NULL) != MH_OK) {
+			//	_MESSAGE("Failed to hook D3D11CreateDeviceAndSwapChain");
+			//}
 
-		if (msg->type == F4SE::MessagingInterface::kGameDataReady) {
+			//if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK) {
+			//	// 处理错误
+			//	_MESSAGE("Failed to enable hooks");
+			//}
 
+		} else if (msg->type == F4SE::MessagingInterface::kGameDataReady) {
 			InitializePlugin();
-			
 
 		} else if (msg->type == F4SE::MessagingInterface::kPostLoadGame) {
 			ResetScopeStatus();
 		} else if (msg->type == F4SE::MessagingInterface::kNewGame) {
 			ResetScopeStatus();
-		}
-		else if (msg->type == F4SE::MessagingInterface::kPostSaveGame) {
+		} else if (msg->type == F4SE::MessagingInterface::kPostSaveGame) {
 			//reshadeImpl->SetRenderEffect(true);
 		} else if (msg->type == F4SE::MessagingInterface::kGameLoaded) {
-			
-			
-			//reshadeImpl->SetRenderEffect(false);	
+			//reshadeImpl->SetRenderEffect(false);
 		}
-
 	});
 
 	return true;
 }
+
+F4SE_EXPORT constinit auto F4SEPlugin_Version = []() noexcept {
+	F4SE::PluginVersionData data{};
+
+	data.AuthorName(Version::AUTHOR);
+	data.PluginName(Version::PROJECT);
+	data.PluginVersion(Version::VERSION);
+
+	data.UsesAddressLibrary(true);
+	data.IsLayoutDependent(true);
+	data.UsesSigScanning(false);
+	data.HasNoStructUse(false);
+
+	data.CompatibleVersions({ F4SE::RUNTIME_1_10_163 });
+	return data;
+}();
+
+
+//
+//extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Load(const F4SE::LoadInterface* a_f4se)
+//{
+//
+//}

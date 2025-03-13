@@ -1,0 +1,129 @@
+Package: vcpkg-cmake-config
+Version: 2024-05-23
+Architecture: x64-windows
+Multi-Arch: same
+Abi: de428a86fd4f676e5acde03d8e7b95cd46a3ca76550759a04b3f26512763826a
+Status: install ok installed
+
+Package: vcpkg-cmake
+Version: 2024-04-23
+Architecture: x64-windows
+Multi-Arch: same
+Abi: c6f56f1171d9a88d30f8b7a12a7f56c571ccf88fd9bb187e503f33ac680faae4
+Status: install ok installed
+
+Package: vcpkg-boost
+Version: 2024-05-15
+Architecture: x64-windows
+Multi-Arch: same
+Abi: cfb19bb0820e18fc212b73acafafca0a28347d90aa28cb7a26a29a6bd391dea6
+Status: install ok installed
+
+Package: boost-uninstall
+Version: 1.86.0
+Architecture: x64-windows
+Multi-Arch: same
+Abi: b2506b76509ef80e0d7ca3c9b92b1a0cbcc51dd862f4f329b40a9fafa0de91e9
+Description: Internal vcpkg port used to uninstall Boost
+Status: install ok installed
+
+Package: boost-cmake
+Version: 1.86.0
+Depends: boost-uninstall, vcpkg-boost, vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: eef784ed8855daa5ac20c00311009b9b52f1f70a18b72e44dfdc026ecfb5aad0
+Description: Boost CMake support infrastructure
+Status: install ok installed
+
+Package: boost-headers
+Version: 1.86.0
+Depends: boost-cmake
+Architecture: x64-windows
+Multi-Arch: same
+Abi: a0080056eea9ad8854ccbb0748013c68e4917c99b21a7b910c0d83216e3b0586
+Description: Boost headers module
+Status: install ok installed
+
+Package: boost-config
+Version: 1.86.0
+Depends: boost-cmake, boost-headers
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 125526fa35aa8110ac37b33ed2026a31b1bc99c55201e481d28ec6c336cb56f0
+Description: Boost config module
+Status: install ok installed
+
+Package: boost-static-assert
+Version: 1.86.0
+Depends: boost-cmake, boost-config, boost-headers
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 5ccc038caff07fb348f13e81a05dacf717c0573011f3a9247719092512826df9
+Description: Boost static_assert module
+Status: install ok installed
+
+Package: boost-type-traits
+Version: 1.86.0
+Depends: boost-cmake, boost-config, boost-headers, boost-static-assert
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 386cf1ff9578fa9aab3accd02039dafb217afdb8e85da30804cc565a37e4b6f8
+Description: Boost type_traits module
+Status: install ok installed
+
+Package: boost-assert
+Version: 1.86.0
+Depends: boost-cmake, boost-config, boost-headers
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 9fba6d095a624cc194c567bd87d8771dd52c5dfb08e8b6a1803e344e6405a549
+Description: Boost assert module
+Status: install ok installed
+
+Package: boost-stl-interfaces
+Version: 1.86.0
+Depends: boost-assert, boost-cmake, boost-config, boost-headers, boost-type-traits
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 394932cb5263b2f418bf7075b4c26b8d2345faf627c15b69f181cb898ed8818b
+Description: Boost stl_interfaces module
+Status: install ok installed
+
+Package: detours
+Version: 4.0.1
+Port-Version: 8
+Architecture: x64-windows
+Multi-Arch: same
+Abi: d246378c98f8657f9acc269c293a55419722b2453fbc079cd6dbd0270148e6a7
+Description: Detours is a software package for monitoring and instrumenting API calls on Windows.
+Status: install ok installed
+
+Package: fmt
+Version: 11.0.2
+Port-Version: 1
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: faa536a34b4eb11da879941b3e68fbdbd68df03da05cb493eeb356454fa5670d
+Description: {fmt} is an open-source formatting library providing a fast and safe alternative to C stdio and C++ iostreams.
+Status: install ok installed
+
+Package: rsm-mmio
+Version: 2.0.0
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 7916c00586a467d2917b43c0f993759c6f40e514ba0bda58562bab417d31e6a5
+Description: A cross-platform memory-mapped io library for C++
+Status: install ok installed
+
+Package: spdlog
+Version: 1.15.1
+Depends: fmt, vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 671c82f0d365229487dd67f36107ee0a4b28933053dccb20814b46363958070c
+Description: Very fast, header-only/compiled, C++ logging library.
+Status: install ok installed
+

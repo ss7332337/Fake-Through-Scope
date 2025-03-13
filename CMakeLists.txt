@@ -16,11 +16,6 @@ set_from_environment(Fallout4Path)
 set_from_environment(VCPKG_ROOT)
 
 
-#find_path(STB_INCLUDE_DIRS "stb_c_lexer.h")
-#target_include_directories(Penetration PRIVATE ${STB_INCLUDE_DIRS})
-
-
-
 if (DEFINED VCPKG_ROOT)
 	set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 	set(VCPKG_TARGET_TRIPLET "x64-windows-static-md" CACHE STRING "")
@@ -43,6 +38,9 @@ project(
 )
 
 
+find_package(spdlog REQUIRED CONFIG)
+find_package(imgui REQUIRED CONFIG)
+find_package(nlohmann_json REQUIRED CONFIG)
 
 configure_file(
 	${CMAKE_CURRENT_SOURCE_DIR}/cmake/Version.h.in
@@ -87,16 +85,6 @@ if (NOT TARGET CommonLibF4)
 	add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../CommonLibF4" CommonLibF4)
 endif ()
 
-if (NOT TARGET ImGui186)
-	add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../imgui-1.86" ImGui186)
-endif ()
-
-
-
-#add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../FidelityFX-SDK-1.0/sdk" FidelityFX-SDK)
-
-find_package(spdlog REQUIRED CONFIG)
-
 # ---- Add source files ----
 
 include(cmake/sourcelist.cmake)
@@ -126,7 +114,10 @@ add_library(
 #endforeach()
 
 macro(set_hlsl_properties HLSL_FILE SHADER_TYPE)
-  set_source_files_properties(${HLSL_FILE} PROPERTIES VS_SHADER_OBJECT_FILE_NAME "G:\\0p\\Steam\\steamapps\\common\\Fallout 4\\Data\\Shaders\\XiFeiLi\\%(Filename).cso" VS_SHADER_TYPE ${SHADER_TYPE} VS_SHADER_MODEL 5.0 VS_SHADER_ENTRYPOINT main)
+  set_source_files_properties(${HLSL_FILE} 
+  PROPERTIES VS_SHADER_OBJECT_FILE_NAME 
+  "${Fallout4Path}/Data/Shaders/XiFeiLi/%(Filename).cso" 
+  VS_SHADER_TYPE ${SHADER_TYPE} VS_SHADER_MODEL 5.0 VS_SHADER_ENTRYPOINT main)
 endmacro()
 
 
@@ -159,9 +150,10 @@ target_include_directories(
 		${CMAKE_CURRENT_BINARY_DIR}/include
 		${CMAKE_CURRENT_SOURCE_DIR}/src
 		#${CMAKE_CURRENT_SOURCE_DIR}/../DirectX-Headers/include
-		${CMAKE_CURRENT_SOURCE_DIR}/../imgui-1.86
-		${CMAKE_CURRENT_SOURCE_DIR}/../bsa
+		#${CMAKE_CURRENT_SOURCE_DIR}/../imgui-1.89
+		#${CMAKE_CURRENT_SOURCE_DIR}/../bsa
 		${CMAKE_CURRENT_SOURCE_DIR}/include
+		${IMGUI_INCLUDE_DIRS}
 
 )
 
@@ -174,11 +166,13 @@ target_link_libraries(
 		minhook::minhook
 		CommonLibF4::CommonLibF4
 		spdlog::spdlog
-		ImGui186::ImGui186
-		bsa::bsa
-		${CMAKE_CURRENT_SOURCE_DIR}/lib/ffx_backend_dx12_x64.lib
-		${CMAKE_CURRENT_SOURCE_DIR}/lib/ffx_fsr2_x64.lib
-		${CMAKE_CURRENT_SOURCE_DIR}/lib/detours.X64/detours.lib
+		imgui::imgui
+		#imgui::impl_dx11
+		#ImGui189::ImGui189
+		#bsa::bsa
+		# ${CMAKE_CURRENT_SOURCE_DIR}/lib/ffx_backend_dx12_x64.lib
+		# ${CMAKE_CURRENT_SOURCE_DIR}/lib/ffx_fsr2_x64.lib
+		# ${CMAKE_CURRENT_SOURCE_DIR}/lib/detours.X64/detours.lib
 		#FidelityFX-SDK
 )
 
@@ -231,10 +225,10 @@ if(true)
 		POST_BUILD
 		#COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> "G:/Modding/MO2/mods/FTS/F4SE/Plugins/"
 		#COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PDB_FILE:${PROJECT_NAME}> "G:/Modding/MO2/mods/FTS/F4SE/Plugins/"
-		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> "G:/0p/Steam/steamapps/common/Fallout 4/Data/F4SE/Plugins/"
-		#COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> "F:/Modding/MO2/mods/Fake Through Scope 0.9.1/F4SE/Plugins/"
-		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PDB_FILE:${PROJECT_NAME}> "G:/0p/Steam/steamapps/common/Fallout 4/Data/F4SE/Plugins/"
-		#COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PDB_FILE:${PROJECT_NAME}> "F:/Modding/MO2/mods/Fake Through Scope 0.9.1/F4SE/Plugins/"
+		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> "${Fallout4Path}/Data/F4SE/Plugins/"
+		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PDB_FILE:${PROJECT_NAME}> "${Fallout4Path}/Data/F4SE/Plugins/"
+		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> "G:/Games/FO4_SO/mods/Fake Through Scope testing/F4SE/Plugins/"
+		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PDB_FILE:${PROJECT_NAME}> "G:/Games/FO4_SO/mods/Fake Through Scope testing/F4SE/Plugins/"
 	)
 else ()
 	message(

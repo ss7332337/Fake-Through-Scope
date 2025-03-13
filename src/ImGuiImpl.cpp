@@ -135,14 +135,14 @@ namespace ImGuiImpl
 			player->SetInIronSightsImpl(true);
 			//started
 			sightedForm = (RE::TESIdleForm*)RE::TESForm::GetFormByID(0x4D32);
-			player->currentProcess->PlayIdle(player, 0x35, sightedForm);
+			player->currentProcess->PlayIdle(*static_cast<RE::Actor*>(player), sightedForm, nullptr);
 		}
 		else
 		{
 			player->SetInIronSightsImpl(false);
 			//ended
 			sightedForm = (RE::TESIdleForm*)RE::TESForm::GetFormByID(0x4AD9);
-			player->currentProcess->PlayIdle(player, 0x35, sightedForm);
+			player->currentProcess->PlayIdle(*static_cast<RE::Actor*>(player), sightedForm, nullptr);
 		}
 	}
 
@@ -329,7 +329,7 @@ namespace ImGuiImpl
 				if (additionalKeywords_count < additionalKeywords.size())
 					additionalKeywords.pop_back();
 
-				additionalKeywords_count = max(0, min(100, additionalKeywords_count));
+				additionalKeywords_count = std::max(0, std::min(100, additionalKeywords_count));
 
 				for (int i = 0; i < additionalKeywords_count; i++) {
 					std::string label = "keyword " + std::to_string(i);

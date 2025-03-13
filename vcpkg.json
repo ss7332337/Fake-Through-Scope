@@ -8,7 +8,7 @@
     "boost-stl-interfaces",
     "detours",
     "fmt",
-    "mmio",
+    "rsm-mmio",
     "spdlog"
   ]
 }

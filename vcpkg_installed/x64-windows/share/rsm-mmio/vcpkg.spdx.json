@@ -1,0 +1,110 @@
+{
+  "$schema": "https://raw.githubusercontent.com/spdx/spdx-spec/v2.2.1/schemas/spdx-schema.json",
+  "spdxVersion": "SPDX-2.2",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "documentNamespace": "https://spdx.org/spdxdocs/rsm-mmio-x64-windows-2.0.0-3331758c-9d0a-4a9c-956b-a41dd112fc46",
+  "name": "rsm-mmio:x64-windows@2.0.0 7916c00586a467d2917b43c0f993759c6f40e514ba0bda58562bab417d31e6a5",
+  "creationInfo": {
+    "creators": [
+      "Tool: vcpkg-2025-01-29-a75ad067f470c19f030361064e32a2585392bee2"
+    ],
+    "created": "2025-02-06T02:59:08Z"
+  },
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "GENERATES",
+      "relatedSpdxElement": "SPDXRef-binary"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-0"
+    },
+    {
+      "spdxElementId": "SPDXRef-port",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-file-1"
+    },
+    {
+      "spdxElementId": "SPDXRef-binary",
+      "relationshipType": "GENERATED_FROM",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-0",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-file-1",
+      "relationshipType": "CONTAINED_BY",
+      "relatedSpdxElement": "SPDXRef-port"
+    }
+  ],
+  "packages": [
+    {
+      "name": "rsm-mmio",
+      "SPDXID": "SPDXRef-port",
+      "versionInfo": "2.0.0",
+      "downloadLocation": "NOASSERTION",
+      "homepage": "https://github.com/Ryan-rsm-McKenzie/mmio",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "description": "A cross-platform memory-mapped io library for C++",
+      "comment": "This is the port (recipe) consumed by vcpkg."
+    },
+    {
+      "name": "rsm-mmio:x64-windows",
+      "SPDXID": "SPDXRef-binary",
+      "versionInfo": "7916c00586a467d2917b43c0f993759c6f40e514ba0bda58562bab417d31e6a5",
+      "downloadLocation": "NONE",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "comment": "This is a binary package built by vcpkg."
+    },
+    {
+      "SPDXID": "SPDXRef-resource-0",
+      "name": "Ryan-rsm-McKenzie/mmio",
+      "downloadLocation": "git+https://github.com/Ryan-rsm-McKenzie/mmio@2.0.0",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "a1b0d586c12708233c0379b16a9f60bab27f12cb414736ee245e37888622ac352e834a58808127087788f930311125e2b26e6dad156c72e68143f95910cda48f"
+        }
+      ]
+    }
+  ],
+  "files": [
+    {
+      "fileName": "./E:/vsProject/_dependency/vcpkg/ports/rsm-mmio/portfile.cmake",
+      "SPDXID": "SPDXRef-file-0",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "8e98c9a958acfe467d17d2f78fb6fac4f719c07902985b35c36a571d5c94084b"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./E:/vsProject/_dependency/vcpkg/ports/rsm-mmio/vcpkg.json",
+      "SPDXID": "SPDXRef-file-1",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "28fa1d25df0e0b9a23a5616d4d732eac3290c10416c57ab2b13d42bdf1932f66"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    }
+  ]
+}
